@@ -1,0 +1,45 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.pfx
+*.jks
+*.keystore
+
+# Secrets / local config
+appsettings.*.local.json
+.env
+.env.*
+*.local.json
+
+# Node / Angular
+node_modules/
+web-admin/dist/
+web-admin/.angular/
+npm-debug.log*
+
+# Flutter / Dart
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/.packages
+mobile/build/
+mobile/android/key.properties
+mobile/android/app/google-services.json
+mobile/ios/Runner/GoogleService-Info.plist
+mobile/**/local.properties
+firebase-*.json
+
+# Logs
+*.log
+logs/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+*.swp

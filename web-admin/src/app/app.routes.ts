@@ -1,0 +1,55 @@
+import { Routes } from '@angular/router';
+import { authGuard, permissionGuard } from './core/auth/auth.guard';
+
+export const routes: Routes = [
+  {
+    path: 'login',
+    loadComponent: () => import('./features/auth/login.component').then((m) => m.LoginComponent),
+  },
+  {
+    path: 'change-password',
+    loadComponent: () => import('./features/auth/change-password.component').then((m) => m.ChangePasswordComponent),
+    canActivate: [authGuard],
+  },
+  {
+    path: '',
+    loadComponent: () => import('./layout/layout.component').then((m) => m.LayoutComponent),
+    canActivate: [authGuard],
+    children: [
+      {
+        path: 'setup/users',
+        loadComponent: () => import('./features/setup/users.component').then((m) => m.UsersComponent),
+        canActivate: [permissionGuard('Users.View')],
+      },
+      {
+        path: 'setup/roles',
+        loadComponent: () => import('./features/setup/roles.component').then((m) => m.RolesComponent),
+        canActivate: [permissionGuard('Roles.Manage')],
+      },
+      {
+        path: 'setup/branches',
+        loadComponent: () => import('./features/setup/branches.component').then((m) => m.BranchesComponent),
+        canActivate: [permissionGuard('Branches.Manage')],
+      },
+      {
+        path: 'setup/features',
+        loadComponent: () =>
+          import('./features/setup/feature-toggles.component').then((m) => m.FeatureTogglesComponent),
+        canActivate: [permissionGuard('Settings.Manage')],
+      },
+      {
+        path: 'setup/devices',
+        loadComponent: () => import('./features/setup/devices.component').then((m) => m.DevicesComponent),
+        canActivate: [permissionGuard('Devices.Manage')],
+      },
+      {
+        path: 'platform/tenants',
+        loadComponent: () =>
+          import('./features/platform/platform-tenants.component').then((m) => m.PlatformTenantsComponent),
+        canActivate: [permissionGuard('Platform.Tenants.Manage')],
+      },
+      { path: '', redirectTo: 'setup/users', pathMatch: 'full' },
+    ],
+  },
+  { path: '**', redirectTo: '' },
+];

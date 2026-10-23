@@ -1,0 +1,42 @@
+name: web-admin
+
+on:
+  push:
+    branches: [main]
+    paths: ["web-admin/**", ".github/workflows/web-admin.yml"]
+  pull_request:
+    paths: ["web-admin/**", ".github/workflows/web-admin.yml"]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web-admin
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: web-admin/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test -- --watch=false --browsers=ChromeHeadless
+
+      - name: Production build
+        run: npm run build -- --configuration production
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-admin-dist
+          path: web-admin/dist/web-admin

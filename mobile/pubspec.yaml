@@ -1,0 +1,45 @@
+name: stockorder_mobile
+description: StockOrder field app (Build Spec section 14).
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.0
+  flutter: ">=3.27.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: 3.4.3
+  riverpod_annotation: 4.0.7
+  go_router: 18.1.1
+  dio: 5.11.1
+  # Drift 2.32+ bundles SQLite via package:sqlite3 (>=3.x) automatically — no
+  # sqlite3_flutter_libs dependency needed (see drift.simonbinder.eu/platforms).
+  # SQLCipher encryption wiring is a Phase 1 TODO: sqlcipher_flutter_libs was
+  # end-of-lifed the same way: verify the current drift docs for the replacement
+  # before building the real encrypted NativeDatabase in Phase 1.
+  drift: 2.35.2
+  sqlite3: ^3.0.0
+  flutter_secure_storage: 11.2.0
+  mobile_scanner: 7.4.2
+  local_auth: 3.0.2
+  firebase_core: 5.1.0
+  firebase_messaging: 17.0.1
+  firebase_crashlytics: 6.0.1
+  path_provider: 2.1.6
+  path: 1.9.1
+  json_annotation: 4.12.0
+  uuid: 4.6.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  riverpod_generator: 4.0.9
+  drift_dev: 2.35.1
+  build_runner: 2.17.1
+  json_serializable: 6.15.2
+  flutter_lints: 5.0.0
+
+flutter:
+  uses-material-design: true

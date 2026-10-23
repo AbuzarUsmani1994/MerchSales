@@ -1,0 +1,133 @@
+{
+  "industry": "Restaurant",
+  "units": [
+    { "code": "kg", "name": "Kilogram", "decimalPlaces": 3 },
+    { "code": "g", "name": "Gram", "decimalPlaces": 0 },
+    { "code": "l", "name": "Litre", "decimalPlaces": 3 },
+    { "code": "ml", "name": "Millilitre", "decimalPlaces": 0 },
+    { "code": "pcs", "name": "Pieces", "decimalPlaces": 0 },
+    { "code": "portion", "name": "Portion", "decimalPlaces": 0 }
+  ],
+  "productTypes": [
+    { "code": "Ingredient", "trackingMode": "Stocked", "batchMode": "None", "issueRule": "FIFO" },
+    { "code": "Dish", "trackingMode": "Recipe", "batchMode": "None", "issueRule": "FIFO" },
+    { "code": "Beverage", "trackingMode": "Stocked", "batchMode": "None", "issueRule": "FIFO" },
+    { "code": "Packaging", "trackingMode": "Stocked", "batchMode": "None", "issueRule": "FIFO" }
+  ],
+  "attributeDefinitions": [
+    { "entity": "Product", "code": "spiceLevel", "dataType": "List" },
+    { "entity": "Product", "code": "isVeg", "dataType": "Boolean" }
+  ],
+  "taxCodes": [
+    { "code": "NONE", "ratePercent": 0 }
+  ],
+  "paymentMethods": [ "CASH", "CARD", "WALLET" ],
+  "reasonCodes": [ "WASTAGE", "SPOILED", "STAFF_MEAL", "COMPLIMENTARY", "VOID", "DAMAGE" ],
+  "stockDocumentTypes": [
+    { "code": "OPENING", "direction": "In", "movementKind": "Receipt", "requiresApproval": false },
+    { "code": "ADJUST", "direction": "Both", "movementKind": "Adjustment", "requiresApproval": true, "approvalThresholdValue": 50000, "reasonRequired": true },
+    { "code": "WASTAGE", "direction": "Out", "movementKind": "Adjustment", "requiresApproval": false, "reasonRequired": true },
+    { "code": "STAFF_MEAL", "direction": "Out", "movementKind": "Issue", "requiresApproval": false },
+    { "code": "TRANSFER", "direction": "Move", "movementKind": "Transfer", "requiresApproval": false },
+    { "code": "COUNT_ADJ", "direction": "Both", "movementKind": "Count", "requiresApproval": false, "isSystem": true }
+  ],
+  "numberSeries": [
+    { "documentType": "SalesOrder", "prefix": "SO-", "paddingLength": 6 },
+    { "documentType": "Invoice", "prefix": "INV-", "paddingLength": 6 },
+    { "documentType": "Receipt", "prefix": "RCPT-", "paddingLength": 6 },
+    { "documentType": "GoodsReceipt", "prefix": "GRN-", "paddingLength": 6 },
+    { "documentType": "PurchaseOrder", "prefix": "PO-", "paddingLength": 6 },
+    { "documentType": "PurchaseReturn", "prefix": "PR-", "paddingLength": 6 },
+    { "documentType": "SalesReturn", "prefix": "SR-", "paddingLength": 6 },
+    { "documentType": "Payment", "prefix": "PAY-", "paddingLength": 6 },
+    { "documentType": "StockAdjustment", "prefix": "ADJ-", "paddingLength": 6 },
+    { "documentType": "Transfer", "prefix": "TRF-", "paddingLength": 6 },
+    { "documentType": "StockCount", "prefix": "CNT-", "paddingLength": 6 },
+    { "documentType": "OpeningStock", "prefix": "OPN-", "paddingLength": 6 }
+  ],
+  "roles": [
+    {
+      "name": "Owner",
+      "isSystem": true,
+      "permissions": "ALL_NON_PLATFORM"
+    },
+    {
+      "name": "Manager",
+      "isSystem": true,
+      "permissions": [
+        "Users.View", "Devices.Manage", "Settings.Manage", "Branches.Manage", "Audit.View",
+        "Catalog.View", "Catalog.Manage", "Catalog.Import", "Pricing.View", "Pricing.Manage",
+        "Inventory.View", "Inventory.Cost.View", "Inventory.Document.Create", "Inventory.Document.Post",
+        "Inventory.Document.Approve", "Inventory.Transfer.Create", "Inventory.Transfer.Receive",
+        "Inventory.Count.Perform", "Inventory.Count.Post", "Inventory.Batch.Manage",
+        "Purchasing.View", "Purchasing.Supplier.Manage", "Purchasing.Order.Create", "Purchasing.Order.Approve",
+        "Purchasing.Receipt.Post", "Purchasing.Return.Post",
+        "Sales.View", "Sales.Customer.Manage", "Sales.Order.Create", "Sales.Order.Confirm", "Sales.Order.Fulfil",
+        "Sales.Order.Cancel", "Sales.Price.Override", "Sales.Discount.Apply", "Sales.Credit.Override",
+        "Sales.Invoice.Post", "Sales.Invoice.Cancel", "Sales.Return.Post",
+        "Finance.Payment.Receive", "Finance.Payment.Make", "Finance.CashSession.Operate", "Finance.CashSession.Close",
+        "Finance.Ledger.View", "Finance.Period.Close",
+        "Reports.Stock.View", "Reports.Sales.View", "Reports.Purchasing.View", "Reports.Financial.View", "Reports.Export",
+        "Mobile.Use"
+      ]
+    },
+    {
+      "name": "Cashier",
+      "isSystem": true,
+      "permissions": [
+        "Catalog.View", "Inventory.View", "Sales.View", "Sales.Customer.Manage",
+        "Sales.Order.Create", "Sales.Order.Confirm", "Sales.Order.Fulfil", "Sales.Invoice.Post",
+        "Finance.Payment.Receive", "Finance.CashSession.Operate", "Finance.CashSession.Close",
+        "Reports.Sales.View", "Mobile.Use"
+      ]
+    },
+    {
+      "name": "Waiter",
+      "isSystem": true,
+      "permissions": [ "Catalog.View", "Sales.View", "Sales.Order.Create", "Sales.Order.Fulfil", "Mobile.Use" ]
+    },
+    {
+      "name": "Kitchen",
+      "isSystem": true,
+      "permissions": [ "Catalog.View", "Sales.View", "Mobile.Use" ]
+    },
+    {
+      "name": "StoreKeeper",
+      "isSystem": true,
+      "permissions": [
+        "Catalog.View", "Inventory.View", "Inventory.Cost.View", "Inventory.Document.Create", "Inventory.Document.Post",
+        "Inventory.Transfer.Create", "Inventory.Transfer.Receive", "Inventory.Count.Perform", "Inventory.Batch.Manage",
+        "Purchasing.View", "Purchasing.Receipt.Post", "Reports.Stock.View", "Mobile.Use"
+      ]
+    },
+    {
+      "name": "Purchaser",
+      "isSystem": true,
+      "permissions": [
+        "Catalog.View", "Pricing.View", "Inventory.View",
+        "Purchasing.View", "Purchasing.Supplier.Manage", "Purchasing.Order.Create",
+        "Purchasing.Receipt.Post", "Purchasing.Return.Post", "Reports.Purchasing.View", "Mobile.Use"
+      ]
+    }
+  ],
+  "features": {
+    "Inventory.Approvals": true,
+    "Finance.CashSessions": true,
+    "Restaurant.Tables": true,
+    "Restaurant.Kitchen": true,
+    "Restaurant.Recipes": true,
+    "Restaurant.Modifiers": true,
+    "Mobile.Offline": true
+  },
+  "settings": {
+    "Mobile.MaxOfflineHours": "24",
+    "Sales.MaxDiscountPercent": "10",
+    "Purchasing.ApprovalThreshold": "100000",
+    "Money.RoundingDecimals": "2"
+  },
+  "records": {
+    "walkInCustomer": { "code": "WALKIN", "name": "Walk-in Customer" },
+    "defaultPriceList": { "code": "MENU", "name": "Menu" },
+    "openAccountingPeriodForCurrentMonth": true
+  }
+}

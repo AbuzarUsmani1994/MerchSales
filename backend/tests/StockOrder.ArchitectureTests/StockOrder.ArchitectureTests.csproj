@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BuildingBlocks\StockOrder.SharedKernel\StockOrder.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks\StockOrder.Infrastructure\StockOrder.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Tenancy\StockOrder.Modules.Tenancy\StockOrder.Modules.Tenancy.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Tenancy\StockOrder.Modules.Tenancy.Contracts\StockOrder.Modules.Tenancy.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Identity\StockOrder.Modules.Identity\StockOrder.Modules.Identity.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Identity\StockOrder.Modules.Identity.Contracts\StockOrder.Modules.Identity.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Platform\StockOrder.Modules.Platform\StockOrder.Modules.Platform.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Platform\StockOrder.Modules.Platform.Contracts\StockOrder.Modules.Platform.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Hosts\StockOrder.Api\StockOrder.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="NetArchTest.Rules" />
+    <PackageReference Include="coverlet.collector" />
+  </ItemGroup>
+
+</Project>

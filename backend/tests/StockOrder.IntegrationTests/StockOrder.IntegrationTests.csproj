@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\BuildingBlocks\StockOrder.SharedKernel\StockOrder.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks\StockOrder.Infrastructure\StockOrder.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Tenancy\StockOrder.Modules.Tenancy\StockOrder.Modules.Tenancy.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Identity\StockOrder.Modules.Identity\StockOrder.Modules.Identity.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Platform\StockOrder.Modules.Platform\StockOrder.Modules.Platform.csproj" />
+    <ProjectReference Include="..\..\src\Hosts\StockOrder.Api\StockOrder.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="Testcontainers.MsSql" />
+    <PackageReference Include="Respawn" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="coverlet.collector" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\..\database\scripts\*.sql" CopyToOutputDirectory="PreserveNewest">
+      <Link>Scripts\%(Filename)%(Extension)</Link>
+    </None>
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,72 @@
+name: backend
+
+on:
+  push:
+    branches: [main]
+    paths: ["backend/**", "database/**", ".github/workflows/backend.yml"]
+  pull_request:
+    paths: ["backend/**", "database/**", ".github/workflows/backend.yml"]
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2019-latest
+        env:
+          ACCEPT_EULA: "Y"
+          SA_PASSWORD: "StockOrder!Test123"
+        ports:
+          - 1433:1433
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('backend/Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore backend/StockOrder.sln
+
+      - name: Build
+        run: dotnet build backend/StockOrder.sln --no-restore -c Release
+
+      - name: Unit + architecture tests
+        run: |
+          dotnet test backend/tests/StockOrder.UnitTests/StockOrder.UnitTests.csproj --no-build -c Release --logger "trx"
+          dotnet test backend/tests/StockOrder.ArchitectureTests/StockOrder.ArchitectureTests.csproj --no-build -c Release --logger "trx"
+
+      - name: Integration tests
+        env:
+          TEST_SQL_CONNECTION: "Server=localhost;Database=master;User Id=sa;Password=StockOrder!Test123;TrustServerCertificate=True;Encrypt=True"
+        run: dotnet test backend/tests/StockOrder.IntegrationTests/StockOrder.IntegrationTests.csproj --no-build -c Release --logger "trx"
+
+      - name: Publish API
+        run: dotnet publish backend/src/Hosts/StockOrder.Api/StockOrder.Api.csproj -c Release -r win-x64 --self-contained false -o publish/api
+
+      - name: Publish Worker
+        run: dotnet publish backend/src/Hosts/StockOrder.Worker/StockOrder.Worker.csproj -c Release -r win-x64 --self-contained false -o publish/worker
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stockorder-api
+          path: publish/api
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: stockorder-worker
+          path: publish/worker
+
+      - name: Secret scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

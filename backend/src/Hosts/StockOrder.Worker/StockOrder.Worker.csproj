@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <UserSecretsId>stockorder-worker</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\BuildingBlocks\StockOrder.SharedKernel\StockOrder.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\BuildingBlocks\StockOrder.Infrastructure\StockOrder.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Tenancy\StockOrder.Modules.Tenancy\StockOrder.Modules.Tenancy.csproj" />
+    <ProjectReference Include="..\..\Modules\Identity\StockOrder.Modules.Identity\StockOrder.Modules.Identity.csproj" />
+    <ProjectReference Include="..\..\Modules\Platform\StockOrder.Modules.Platform\StockOrder.Modules.Platform.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Mediator.SourceGenerator" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+    <PackageReference Include="Mediator.Abstractions" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="Hangfire.Core" />
+    <PackageReference Include="Hangfire.SqlServer" />
+    <PackageReference Include="Hangfire.AspNetCore" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" />
+  </ItemGroup>
+
+</Project>

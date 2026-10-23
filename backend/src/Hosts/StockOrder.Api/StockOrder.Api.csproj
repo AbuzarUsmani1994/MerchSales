@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <UserSecretsId>stockorder-api</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\BuildingBlocks\StockOrder.SharedKernel\StockOrder.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\BuildingBlocks\StockOrder.Infrastructure\StockOrder.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Modules\Tenancy\StockOrder.Modules.Tenancy\StockOrder.Modules.Tenancy.csproj" />
+    <ProjectReference Include="..\..\Modules\Identity\StockOrder.Modules.Identity\StockOrder.Modules.Identity.csproj" />
+    <ProjectReference Include="..\..\Modules\Platform\StockOrder.Modules.Platform\StockOrder.Modules.Platform.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Mediator.SourceGenerator" PrivateAssets="all" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
+    <PackageReference Include="Mediator.Abstractions" />
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
+  </ItemGroup>
+
+</Project>

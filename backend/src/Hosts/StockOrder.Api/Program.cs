@@ -1,0 +1,149 @@
+using System.Text;
+using FluentValidation;
+using Mediator;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.IdentityModel.Tokens;
+using Scalar.AspNetCore;
+using Serilog;
+using StockOrder.Api;
+using StockOrder.Infrastructure;
+using StockOrder.Infrastructure.Api;
+using StockOrder.Infrastructure.Auth;
+using StockOrder.Infrastructure.Correlation;
+using StockOrder.Infrastructure.Database;
+using StockOrder.Infrastructure.Logging;
+using StockOrder.Infrastructure.Mobile;
+using StockOrder.Infrastructure.Startup;
+using StockOrder.Modules.Identity;
+using StockOrder.Modules.Platform;
+using StockOrder.Modules.Platform.Infrastructure.Bootstrap;
+using StockOrder.Modules.Tenancy;
+
+// `StockOrder.Api.exe bootstrap-platform --admin <username>` runs the one-time platform
+// bootstrap (section 10) and exits without starting the web server.
+if (args.Length > 0 && args[0] == "bootstrap-platform")
+{
+    await BootstrapCli.RunAsync(args);
+    return;
+}
+
+var builder = WebApplication.CreateBuilder(args);
+
+Log.Logger = SerilogSetup.Configure(new LoggerConfiguration(), builder.Configuration).CreateLogger();
+builder.Host.UseSerilog();
+
+builder.Services.AddStockOrderInfrastructure(builder.Configuration);
+builder.Services.AddTenancyModule();
+builder.Services.AddIdentityModule();
+builder.Services.AddPlatformModule();
+
+builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Tenancy.TenancyModule).Assembly);
+builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Identity.IdentityModule).Assembly);
+builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Platform.PlatformModule).Assembly);
+
+builder.Services.AddMediator(options =>
+{
+    // Handlers depend on scoped services (DbContexts, IUnitOfWork, ICurrentUserContext).
+    options.ServiceLifetime = ServiceLifetime.Scoped;
+    options.PipelineBehaviors = [typeof(StockOrder.Infrastructure.Validation.ValidationBehavior<,>)];
+});
+
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer();
+
+// DI-injected options configuration: avoids building a throwaway service provider just to
+// read the already-registered ISigningCertificateProvider (section 10).
+builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme)
+    .Configure<ISigningCertificateProvider>((options, certificateProvider) =>
+    {
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = false,
+            ValidateAudience = false,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new X509SecurityKey(certificateProvider.Certificate),
+            ClockSkew = TimeSpan.FromSeconds(30),
+        };
+    });
+
+builder.Services.AddAuthorization();
+builder.Services.AddControllers();
+builder.Services.AddOpenApi();
+
+builder.Services.AddRateLimiter(options =>
+{
+    // Login: 10/min per IP (section 17). Per-username partitioning happens inside the
+    // handler itself via User.FailedLoginCount/LockoutEndUtc (section 10).
+    options.AddPolicy("login", httpContext => System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+        httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+        {
+            Window = TimeSpan.FromMinutes(1),
+            PermitLimit = 10,
+        }));
+
+    options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.User.FindFirst("sub")?.Value ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromMinutes(1),
+                PermitLimit = 300,
+            }));
+});
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+});
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
+var app = builder.Build();
+
+// Refuses to start if the database is missing a script the code expects (section 7).
+await using (var scope = app.Services.CreateAsyncScope())
+{
+    var databaseOptions = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<DatabaseOptions>>();
+    await SchemaVersionChecker.EnsureAppliedAsync(databaseOptions, CancellationToken.None);
+}
+
+app.UseForwardedHeaders();
+app.UseExceptionHandler();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+    app.MapScalarApiReference();
+}
+
+app.UseMiddleware<CorrelationIdMiddleware>();
+app.UseSerilogRequestLogging();
+
+app.UseHttpsRedirection();
+app.UseRateLimiter();
+
+app.UseRouting();
+app.UseAuthentication();
+app.UseMiddleware<MobileVersionGateMiddleware>();
+
+// Must run before UseAuthorization: PermissionAuthorizationHandler queries IdentityDbContext,
+// which needs the request's connection/transaction already open (section 5.4).
+app.UseMiddleware<UnitOfWorkMiddleware>();
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.MapHealthChecks("/health/live");
+app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready"),
+});
+
+app.Run();

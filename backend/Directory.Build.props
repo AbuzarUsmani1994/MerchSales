@@ -1,0 +1,33 @@
+<Project>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningsNotAsErrors>CS1591</WarningsNotAsErrors>
+    <AnalysisMode>Recommended</AnalysisMode>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AccelerateBuildsInVisualStudio>true</AccelerateBuildsInVisualStudio>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!--
+      CA1716: `Error` is the deliberate, idiomatic name for the Result-pattern failure type (section 5.6).
+      CA1848: LoggerMessage source-gen delegates for every log call is excessive ceremony here — nothing
+              in Phase 0 logs on a hot path hot enough to need it.
+      CA1305: IFormatProvider everywhere is not useful for an English-UI/PKR-only app (section 2).
+      CA1725: `ct` is this codebase's convention (section 20 doesn't mandate a name); the
+              Mediator-generated interface happens to spell it `cancellationToken`.
+      CA1711: Permission/RolePermission etc. are deliberately named after their tables
+              (identity.Permission, identity.RolePermission — section 7's naming rule).
+    -->
+    <NoWarn>$(NoWarn);CA1812;CA1515;CA1716;CA1848;CA1305;CA1725;CA1711</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Roslynator.Analyzers" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

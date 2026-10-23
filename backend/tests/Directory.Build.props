@@ -1,0 +1,12 @@
+<Project>
+
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <!-- CA1707: underscore-separated test method names (Given_When_Then style) are the
+         idiomatic xUnit convention and more readable than PascalCase for test intent. -->
+    <NoWarn>$(NoWarn);CA1707</NoWarn>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>
