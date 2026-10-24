@@ -14,9 +14,15 @@ secret (it's not sensitive).
    → **Variables** tab.
 2. Click **New repository variable**.
 3. Name: `API_BASE_URL`. Value: your server's address, e.g. `https://api.yourcompany.com`
-   (no trailing slash). For testing against a server on your own network before it has a
-   public address, you can use `http://<your-server-LAN-IP>:5000` — this only works for the
-   **dev** flavor, which allows plain HTTP.
+   (no trailing slash). The same variable is used by the web admin deploy, so it's probably
+   set already.
+
+   > **HTTP vs HTTPS.** While the server is reached as `http://<ip>:<port>` (no HTTPS yet),
+   > only the **dev** build can talk to it — the **prod** build refuses plain HTTP, and the
+   > workflow stops a prod build with an `http://` address on purpose. Over plain HTTP,
+   > passwords travel unencrypted across the internet: fine for a short test, not for real
+   > staff. Put the API behind a domain with HTTPS (Cloudflare, see the deploy runbook) before
+   > handing phones out, then switch to prod builds.
 
 ### 2. Create the Android signing key (once, ever)
 
@@ -43,11 +49,12 @@ shouldn't be the one you hand out widely.
 
 Push notifications (low stock alerts, approval requests) need a `google-services.json`
 file from a Firebase project. If you don't set this up yet, the app still builds and runs
-— it just won't receive push notifications.
+— it just won't receive push notifications. (Push is switched on in the app with the next
+release; setting the secret now does no harm.)
 
 1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com)
-   and add an Android app with package name `app.stockorder.mobile` (or whatever you've set
-   in `mobile/android/app/build.gradle`).
+   and add **two** Android apps: package name `app.stockorder.mobile` (prod) and
+   `app.stockorder.mobile.dev` (dev). Download the `google-services.json` that covers both.
 2. Download the `google-services.json` file it gives you.
 3. Base64-encode it:
    - Windows PowerShell: `[Convert]::ToBase64String([IO.File]::ReadAllBytes("google-services.json")) | Set-Clipboard`
@@ -56,11 +63,15 @@ file from a Firebase project. If you don't set this up yet, the app still builds
 
 ## Building an APK
 
+Every change to the app merged into `main` builds a **dev** APK automatically. To build one
+by hand (or a prod one):
+
 1. Go to the **Actions** tab → **mobile** workflow → **Run workflow**.
-2. Choose `dev` (for testing) or `prod` (for the real release-signed build).
-3. Wait for the run to finish (a few minutes).
-4. Open the finished run, scroll to **Artifacts**, and download the `.apk` file — it's named
-   like `app-dev-1.0.0-debug.apk`.
+2. Choose `dev` (for testing, works with an `http://` server) or `prod` (HTTPS server only).
+3. Wait for the run to finish (about 10 minutes).
+4. Open the finished run, scroll to **Artifacts**, and download it. GitHub hands you a
+   `.zip`; the `.apk` is inside, named like `app-dev-1.0.0-debug.apk` (or `...-release.apk`
+   once the signing secrets from step 2 exist).
 
 ## Installing the APK on an Android phone
 
@@ -68,7 +79,22 @@ file from a Firebase project. If you don't set this up yet, the app still builds
    a cloud drive — any way you'd normally move a file to the phone works).
 2. On the phone, open the file. Android will warn that it's from an "unknown source" —
    this is expected for an app not installed from the Play Store. Allow the install.
-3. Open the app, enter your tenant code, username and password, and sign in.
+3. Open the app and sign in (next section).
+
+## First sign-in on a phone
+
+1. The branch manager creates the user on the web admin (**Users → New user**: branch and
+   role, e.g. Cashier or Waiter) and gives the person the **one-time password** it shows.
+2. On the phone: **Company code** (the tenant code, e.g. `CHEEZ`), **Username**, and the
+   one-time password → **Sign in**.
+3. The app asks for a new password (at least 8 characters, not only numbers, not the
+   username). After that it opens the home screen and syncs.
+4. If the phone has a fingerprint or face unlock, the home screen offers to use it next time.
+5. The phone now appears on the web admin's **Devices** page. If it's lost, the branch
+   manager (for their staff) or the Owner revokes it there; "Revoke + wipe" also erases the
+   app's data on the phone the next time it goes online.
+
+Only users whose role includes **Mobile.Use** can sign in on the app.
 
 The `dev` flavor installs alongside the `prod` flavor as a separate app (different name
 and icon badge), so you can have both on the same phone without conflict.
@@ -81,4 +107,11 @@ and icon badge), so you can have both on the same phone without conflict.
 - **App installs but push notifications never arrive**: `GOOGLE_SERVICES_JSON_BASE64`
   probably isn't set, or doesn't match the package name in `android/app/build.gradle`.
 - **App can't reach the server**: check `API_BASE_URL` has no typo and, if testing over
-  your LAN, that the phone and server are on the same network.
+  your LAN, that the phone and server are on the same network. With an `http://` address
+  you must use the **dev** APK.
+- **"This build has no server address" and Sign in is greyed out**: `API_BASE_URL` wasn't
+  set when the APK was built. Set the variable, run the workflow again, reinstall.
+- **"This account isn't allowed to use the mobile app"**: the user's role lacks the
+  `Mobile.Use` permission (Roles page on the web admin).
+- **"Update required"**: the server's minimum app version (Platform → app versions) is above
+  this APK's version. Install the newer APK.
