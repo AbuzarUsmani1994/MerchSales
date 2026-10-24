@@ -1,10 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { TableModule } from 'primeng/table';
-import { CheckboxModule } from 'primeng/checkbox';
-import { ButtonModule } from 'primeng/button';
-import { FormsModule } from '@angular/forms';
+import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatButtonModule } from '@angular/material/button';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ConfigService } from '../../core/config.service';
 
 interface RoleSummary {
@@ -26,34 +25,47 @@ interface PermissionCatalogueEntry {
 @Component({
   selector: 'app-roles',
   standalone: true,
-  imports: [TableModule, CheckboxModule, ButtonModule, FormsModule],
+  imports: [MatCheckboxModule, MatButtonModule, MatProgressBarModule],
   template: `
     <h2>Roles &amp; permission matrix</h2>
-    <p-table [value]="catalogue()" [loading]="loading()" [scrollable]="true">
-      <ng-template pTemplate="header">
-        <tr>
-          <th>Permission</th>
-          @for (role of roles(); track role.id) {
-            <th>{{ role.name }}</th>
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+    <div class="matrix-scroll">
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Permission</th>
+            @for (role of roles(); track role.id) {
+              <th>{{ role.name }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (permission of catalogue(); track permission.code) {
+            <tr>
+              <td>{{ permission.code }}</td>
+              @for (role of roles(); track role.id) {
+                <td class="center">
+                  <mat-checkbox
+                    [checked]="role.permissionCodes.includes(permission.code)"
+                    (change)="toggle(role, permission.code, $event.checked)"
+                  />
+                </td>
+              }
+            </tr>
           }
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="body" let-permission>
-        <tr>
-          <td>{{ permission.code }}</td>
-          @for (role of roles(); track role.id) {
-            <td>
-              <p-checkbox
-                [binary]="true"
-                [ngModel]="role.permissionCodes.includes(permission.code)"
-                (onChange)="toggle(role, permission.code, $event.checked)"
-              />
-            </td>
-          }
-        </tr>
-      </ng-template>
-    </p-table>
-    <p-button label="Save changes" icon="pi pi-save" (onClick)="save()" [loading]="saving()" styleClass="mt-3" />
+        </tbody>
+      </table>
+    </div>
+    <button mat-flat-button color="primary" (click)="save()" [disabled]="saving()" class="mt-3">Save changes</button>
+  `,
+  styles: `
+    .matrix-scroll { overflow-x: auto; }
+    .matrix { border-collapse: collapse; width: 100%; }
+    .matrix th, .matrix td { padding: 0.4rem 0.75rem; border-bottom: 1px solid #e0e0e0; white-space: nowrap; text-align: left; }
+    .center { text-align: center; }
+    .mt-3 { margin-top: 1rem; }
   `,
 })
 export class RolesComponent implements OnInit {

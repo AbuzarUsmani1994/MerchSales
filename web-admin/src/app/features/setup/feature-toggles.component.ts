@@ -1,9 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { TableModule } from 'primeng/table';
-import { ToggleSwitchModule } from 'primeng/toggleswitch';
-import { FormsModule } from '@angular/forms';
+import { MatTableModule } from '@angular/material/table';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ConfigService } from '../../core/config.service';
 
 interface FeatureFlag {
@@ -14,21 +14,28 @@ interface FeatureFlag {
 @Component({
   selector: 'app-feature-toggles',
   standalone: true,
-  imports: [TableModule, ToggleSwitchModule, FormsModule],
+  imports: [MatTableModule, MatSlideToggleModule, MatProgressBarModule],
   template: `
     <h2>Feature toggles</h2>
-    <p-table [value]="features()" [loading]="loading()">
-      <ng-template pTemplate="header"><tr><th>Feature key</th><th>Enabled</th></tr></ng-template>
-      <ng-template pTemplate="body" let-feature>
-        <tr>
-          <td>{{ feature.featureKey }}</td>
-          <td>
-            <p-toggleswitch [ngModel]="feature.isEnabled" (onChange)="toggle(feature, $event.checked)" />
-          </td>
-        </tr>
-      </ng-template>
-    </p-table>
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+    <table mat-table [dataSource]="features()" class="mat-elevation-z1">
+      <ng-container matColumnDef="featureKey">
+        <th mat-header-cell *matHeaderCellDef>Feature key</th>
+        <td mat-cell *matCellDef="let feature">{{ feature.featureKey }}</td>
+      </ng-container>
+      <ng-container matColumnDef="enabled">
+        <th mat-header-cell *matHeaderCellDef>Enabled</th>
+        <td mat-cell *matCellDef="let feature">
+          <mat-slide-toggle [checked]="feature.isEnabled" (change)="toggle(feature, $event.checked)" />
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+    </table>
   `,
+  styles: `table { width: 100%; }`,
 })
 export class FeatureTogglesComponent implements OnInit {
   private readonly http = inject(HttpClient);
@@ -36,6 +43,7 @@ export class FeatureTogglesComponent implements OnInit {
 
   readonly features = signal<FeatureFlag[]>([]);
   readonly loading = signal(true);
+  readonly columns = ['featureKey', 'enabled'];
 
   async ngOnInit(): Promise<void> {
     try {

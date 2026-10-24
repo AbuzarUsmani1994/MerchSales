@@ -2,57 +2,70 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { InputTextModule } from 'primeng/inputtext';
-import { PasswordModule } from 'primeng/password';
-import { CardModule } from 'primeng/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { AuthService } from '../../core/auth/auth.service';
 import { ProblemDetails } from '../../core/auth/auth.models';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [ReactiveFormsModule, ButtonModule, InputTextModule, PasswordModule, CardModule],
+  imports: [
+    ReactiveFormsModule,
+    MatButtonModule,
+    MatCardModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatProgressSpinnerModule,
+  ],
   template: `
     <div class="login-shell">
-      <p-card header="StockOrder — Sign in" class="login-card">
-        <form [formGroup]="form" (ngSubmit)="submit()">
-          <div class="field">
-            <label for="tenantCode">Tenant code</label>
-            <input id="tenantCode" pInputText formControlName="tenantCode" autocomplete="organization" />
-          </div>
-          <div class="field">
-            <label for="username">Username</label>
-            <input id="username" pInputText formControlName="username" autocomplete="username" />
-          </div>
-          <div class="field">
-            <label for="password">Password</label>
-            <p-password
-              id="password"
-              formControlName="password"
-              [feedback]="false"
-              [toggleMask]="true"
-              autocomplete="current-password"
-            />
-          </div>
-          @if (mfaRequired()) {
-            <div class="field">
-              <label for="totpCode">Authenticator code</label>
-              <input id="totpCode" pInputText formControlName="totpCode" autocomplete="one-time-code" />
-            </div>
-          }
-          @if (errorMessage()) {
-            <p class="error">{{ errorMessage() }}</p>
-          }
-          <p-button type="submit" label="Sign in" [loading]="submitting()" [disabled]="form.invalid" />
-        </form>
-      </p-card>
+      <mat-card class="login-card">
+        <mat-card-header>
+          <mat-card-title>StockOrder — Sign in</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <form [formGroup]="form" (ngSubmit)="submit()">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Tenant code</mat-label>
+              <input matInput formControlName="tenantCode" autocomplete="organization" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Username</mat-label>
+              <input matInput formControlName="username" autocomplete="username" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Password</mat-label>
+              <input matInput type="password" formControlName="password" autocomplete="current-password" />
+            </mat-form-field>
+            @if (mfaRequired()) {
+              <mat-form-field appearance="outline" class="full-width">
+                <mat-label>Authenticator code</mat-label>
+                <input matInput formControlName="totpCode" autocomplete="one-time-code" />
+              </mat-form-field>
+            }
+            @if (errorMessage()) {
+              <p class="error">{{ errorMessage() }}</p>
+            }
+            <button mat-flat-button color="primary" type="submit" class="full-width" [disabled]="form.invalid || submitting()">
+              @if (submitting()) {
+                <mat-spinner diameter="20" />
+              } @else {
+                Sign in
+              }
+            </button>
+          </form>
+        </mat-card-content>
+      </mat-card>
     </div>
   `,
   styles: `
     .login-shell { display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f6f8; }
     .login-card { width: 360px; }
-    .field { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 1rem; }
+    .full-width { width: 100%; margin-bottom: 0.5rem; }
     .error { color: #c0392b; font-size: 0.9rem; }
   `,
 })

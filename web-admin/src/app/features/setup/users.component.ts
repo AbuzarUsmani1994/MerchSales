@@ -1,9 +1,9 @@
 import { HttpClient } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { TableModule } from 'primeng/table';
-import { ButtonModule } from 'primeng/button';
-import { TagModule } from 'primeng/tag';
+import { MatTableModule } from '@angular/material/table';
+import { MatChipsModule } from '@angular/material/chips';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ConfigService } from '../../core/config.service';
 
 interface UserSummary {
@@ -18,30 +18,43 @@ interface UserSummary {
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [TableModule, ButtonModule, TagModule],
+  imports: [MatTableModule, MatChipsModule, MatProgressBarModule],
   template: `
     <h2>Users</h2>
-    <p-table [value]="users()" [loading]="loading()">
-      <ng-template pTemplate="header">
-        <tr>
-          <th>Username</th>
-          <th>Display name</th>
-          <th>Email</th>
-          <th>Status</th>
-          <th>MFA</th>
-        </tr>
-      </ng-template>
-      <ng-template pTemplate="body" let-user>
-        <tr>
-          <td>{{ user.username }}</td>
-          <td>{{ user.displayName }}</td>
-          <td>{{ user.email }}</td>
-          <td><p-tag [severity]="user.isActive ? 'success' : 'danger'" [value]="user.isActive ? 'Active' : 'Inactive'" /></td>
-          <td>{{ user.mfaEnabled ? 'Enabled' : '—' }}</td>
-        </tr>
-      </ng-template>
-    </p-table>
+    @if (loading()) {
+      <mat-progress-bar mode="indeterminate" />
+    }
+    <table mat-table [dataSource]="users()" class="mat-elevation-z1">
+      <ng-container matColumnDef="username">
+        <th mat-header-cell *matHeaderCellDef>Username</th>
+        <td mat-cell *matCellDef="let user">{{ user.username }}</td>
+      </ng-container>
+      <ng-container matColumnDef="displayName">
+        <th mat-header-cell *matHeaderCellDef>Display name</th>
+        <td mat-cell *matCellDef="let user">{{ user.displayName }}</td>
+      </ng-container>
+      <ng-container matColumnDef="email">
+        <th mat-header-cell *matHeaderCellDef>Email</th>
+        <td mat-cell *matCellDef="let user">{{ user.email }}</td>
+      </ng-container>
+      <ng-container matColumnDef="status">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let user">
+          <mat-chip [color]="user.isActive ? 'primary' : 'warn'" highlighted>
+            {{ user.isActive ? 'Active' : 'Inactive' }}
+          </mat-chip>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="mfa">
+        <th mat-header-cell *matHeaderCellDef>MFA</th>
+        <td mat-cell *matCellDef="let user">{{ user.mfaEnabled ? 'Enabled' : '—' }}</td>
+      </ng-container>
+
+      <tr mat-header-row *matHeaderRowDef="columns"></tr>
+      <tr mat-row *matRowDef="let row; columns: columns"></tr>
+    </table>
   `,
+  styles: `table { width: 100%; }`,
 })
 export class UsersComponent implements OnInit {
   private readonly http = inject(HttpClient);
@@ -49,6 +62,7 @@ export class UsersComponent implements OnInit {
 
   readonly users = signal<UserSummary[]>([]);
   readonly loading = signal(true);
+  readonly columns = ['username', 'displayName', 'email', 'status', 'mfa'];
 
   async ngOnInit(): Promise<void> {
     try {

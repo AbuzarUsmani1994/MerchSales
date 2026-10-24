@@ -3,9 +3,9 @@ name: web-admin
 on:
   push:
     branches: [main]
-    paths: ["web-admin/**", ".github/workflows/web-admin.yml"]
+    paths: ["web-admin/**", "deploy/**", ".github/workflows/web-admin.yml"]
   pull_request:
-    paths: ["web-admin/**", ".github/workflows/web-admin.yml"]
+    paths: ["web-admin/**", "deploy/**", ".github/workflows/web-admin.yml"]
   workflow_dispatch:
 
 jobs:
@@ -36,7 +36,30 @@ jobs:
       - name: Production build
         run: npm run build -- --configuration production
 
+      # @angular/build:application nests the browser output under /browser.
       - uses: actions/upload-artifact@v4
         with:
           name: web-admin-dist
-          path: web-admin/dist/web-admin
+          path: web-admin/dist/web-admin/browser
+
+  deploy:
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: [self-hosted, windows, stockorder-prod]
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            deploy
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-admin-dist
+          path: publish/web-admin
+
+      - name: Deploy web-admin
+        shell: powershell
+        run: deploy/Deploy-WebAdmin.ps1 -SourcePath "${{ github.workspace }}/publish/web-admin" -ApiBaseUrl "${{ vars.API_BASE_URL }}"

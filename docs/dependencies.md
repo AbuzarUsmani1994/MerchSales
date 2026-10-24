@@ -48,9 +48,17 @@ or its major version changes.
 |---|---|
 | @angular/* | MIT |
 | @jsverse/transloco | MIT |
-| primeng, @primeng/themes, primeicons | MIT |
+| @angular/material, @angular/cdk | MIT |
 | ag-grid-angular, ag-grid-community | MIT (Community edition) |
 | rxjs | Apache-2.0 |
+| eslint, @eslint/js, angular-eslint, typescript-eslint | MIT |
+
+**Deviation from CLAUDE.md section 2**: PrimeNG was named in the spec, but its licensing
+model changed since the spec was written — even the "Community" tier now requires
+registering for a license key (eligibility caps on revenue/team size, annual renewal) or
+it shows an "Invalid License" watermark. Swapped for Angular Material (MIT, no key, no
+caps, maintained by the Angular team) after confirming with the user. AG Grid Community,
+the other UI dependency named in the spec, is still genuinely free MIT — kept as-is.
 
 ## Mobile (pub.dev — see `mobile/pubspec.yaml`)
 

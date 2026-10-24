@@ -3,22 +3,18 @@ name: backend
 on:
   push:
     branches: [main]
-    paths: ["backend/**", "database/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "database/**", "deploy/**", ".github/workflows/backend.yml"]
   pull_request:
-    paths: ["backend/**", "database/**", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "database/**", "deploy/**", ".github/workflows/backend.yml"]
   workflow_dispatch:
 
 jobs:
   build-and-test:
-    runs-on: windows-latest
-    services:
-      sqlserver:
-        image: mcr.microsoft.com/mssql/server:2019-latest
-        env:
-          ACCEPT_EULA: "Y"
-          SA_PASSWORD: "StockOrder!Test123"
-        ports:
-          - 1433:1433
+    # GitHub Actions service containers only run on Linux runners, not Windows — Testcontainers
+    # (used by StockOrder.IntegrationTests' DatabaseFixture) needs Docker too, which ubuntu-latest
+    # has preinstalled. The published win-x64 artifacts below are still valid Windows binaries;
+    # cross-publishing doesn't require building on Windows itself.
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
@@ -46,8 +42,7 @@ jobs:
           dotnet test backend/tests/StockOrder.ArchitectureTests/StockOrder.ArchitectureTests.csproj --no-build -c Release --logger "trx"
 
       - name: Integration tests
-        env:
-          TEST_SQL_CONNECTION: "Server=localhost;Database=master;User Id=sa;Password=StockOrder!Test123;TrustServerCertificate=True;Encrypt=True"
+        # No TEST_SQL_CONNECTION set — DatabaseFixture starts its own Testcontainers SQL Server.
         run: dotnet test backend/tests/StockOrder.IntegrationTests/StockOrder.IntegrationTests.csproj --no-build -c Release --logger "trx"
 
       - name: Publish API
@@ -70,3 +65,38 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    # Runs only on main, and only once the self-hosted runner (installed on the target
+    # server itself — see docs/deploy-runbook.md) picks up the job. No credentials for the
+    # server are stored in GitHub: the runner already runs locally on that machine with
+    # whatever rights were granted when it was registered as a service.
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: [self-hosted, windows, stockorder-prod]
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            deploy
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: stockorder-api
+          path: publish/api
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: stockorder-worker
+          path: publish/worker
+
+      - name: Deploy API
+        shell: powershell
+        run: deploy/Deploy-Api.ps1 -SourcePath "${{ github.workspace }}/publish/api"
+
+      - name: Deploy Worker
+        shell: powershell
+        run: deploy/Deploy-Worker.ps1 -SourcePath "${{ github.workspace }}/publish/worker"

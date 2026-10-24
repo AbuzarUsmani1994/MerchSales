@@ -75,6 +75,20 @@ builder.Services.AddAuthorization();
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+// CORS allows only the admin site origin (section 17). AdminSite:Origin is a plain
+// (non-secret) config value — env var AdminSite__Origin in production, defaults to the
+// Angular dev server's own origin so `ng serve` works against a local API out of the box.
+const string AdminSiteCorsPolicy = "AdminSite";
+var adminSiteOrigin = builder.Configuration["AdminSite:Origin"] ?? "http://localhost:4200";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(AdminSiteCorsPolicy, policy => policy
+        .WithOrigins(adminSiteOrigin)
+        .AllowAnyHeader()
+        .AllowAnyMethod()
+        .WithExposedHeaders(CorrelationIdMiddleware.HeaderName));
+});
+
 builder.Services.AddRateLimiter(options =>
 {
     // Login: 10/min per IP (section 17). Per-username partitioning happens inside the
@@ -130,6 +144,7 @@ app.UseHttpsRedirection();
 app.UseRateLimiter();
 
 app.UseRouting();
+app.UseCors(AdminSiteCorsPolicy);
 app.UseAuthentication();
 app.UseMiddleware<MobileVersionGateMiddleware>();
 

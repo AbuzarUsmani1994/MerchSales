@@ -1,35 +1,44 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ButtonModule } from 'primeng/button';
-import { PasswordModule } from 'primeng/password';
-import { CardModule } from 'primeng/card';
+import { MatButtonModule } from '@angular/material/button';
+import { MatCardModule } from '@angular/material/card';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
   selector: 'app-change-password',
   standalone: true,
-  imports: [ReactiveFormsModule, ButtonModule, PasswordModule, CardModule],
+  imports: [ReactiveFormsModule, MatButtonModule, MatCardModule, MatFormFieldModule, MatInputModule],
   template: `
     <div class="shell">
-      <p-card header="Change your password">
-        <form [formGroup]="form" (ngSubmit)="submit()">
-          <div class="field">
-            <label for="currentPassword">Current password</label>
-            <p-password id="currentPassword" formControlName="currentPassword" [feedback]="false" [toggleMask]="true" />
-          </div>
-          <div class="field">
-            <label for="newPassword">New password</label>
-            <p-password id="newPassword" formControlName="newPassword" [toggleMask]="true" />
-          </div>
-          <p-button type="submit" label="Change password" [loading]="submitting()" [disabled]="form.invalid" />
-        </form>
-      </p-card>
+      <mat-card class="card">
+        <mat-card-header>
+          <mat-card-title>Change your password</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <form [formGroup]="form" (ngSubmit)="submit()">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Current password</mat-label>
+              <input matInput type="password" formControlName="currentPassword" />
+            </mat-form-field>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>New password</mat-label>
+              <input matInput type="password" formControlName="newPassword" />
+            </mat-form-field>
+            <button mat-flat-button color="primary" type="submit" class="full-width" [disabled]="form.invalid || submitting()">
+              Change password
+            </button>
+          </form>
+        </mat-card-content>
+      </mat-card>
     </div>
   `,
   styles: `
     .shell { display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f6f8; }
-    .field { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 1rem; }
+    .card { width: 360px; }
+    .full-width { width: 100%; margin-bottom: 0.5rem; }
   `,
 })
 export class ChangePasswordComponent {
