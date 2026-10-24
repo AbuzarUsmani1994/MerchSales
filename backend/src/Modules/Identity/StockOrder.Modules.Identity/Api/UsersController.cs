@@ -6,8 +6,10 @@ using StockOrder.Modules.Identity.Application.Users;
 
 namespace StockOrder.Modules.Identity.Api;
 
+/// <summary>Branch managers administer their own branch's staff; the handlers enforce which users and roles (section 6, 10).</summary>
 [ApiController]
 [Route("api/v1/identity/users")]
+[BranchScoped]
 public sealed class UsersController(IMediator mediator) : ControllerBase
 {
     [HttpGet]
@@ -23,6 +25,14 @@ public sealed class UsersController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> Create(CreateUserCommand command, CancellationToken ct)
     {
         var result = await mediator.Send(command, ct);
+        return result.ToActionResult();
+    }
+
+    [HttpGet("assignable-roles")]
+    [Authorize(Policy = "Users.Manage")]
+    public async Task<IActionResult> AssignableRoles([FromQuery] Guid? branchId, CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetAssignableRolesQuery(branchId), ct);
         return result.ToActionResult();
     }
 

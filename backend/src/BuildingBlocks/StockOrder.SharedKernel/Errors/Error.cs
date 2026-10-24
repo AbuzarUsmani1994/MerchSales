@@ -15,4 +15,6 @@ public sealed record Error(string Code, string Message, IReadOnlyDictionary<stri
         new(ErrorCodes.NotFound, $"{entityName} was not found.");
 
     public static Error Conflict(string code, string message) => new(code, message);
+
+    public static Error PermissionDenied(string message) => new(ErrorCodes.PermissionDenied, message);
 }

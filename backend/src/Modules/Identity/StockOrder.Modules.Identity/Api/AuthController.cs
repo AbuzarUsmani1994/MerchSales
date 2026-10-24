@@ -7,8 +7,10 @@ using StockOrder.Modules.Identity.Application.Auth;
 
 namespace StockOrder.Modules.Identity.Api;
 
+/// <summary>Every signed-in endpoint here acts only on the caller's own account, so a branch-level role is enough.</summary>
 [ApiController]
 [Route("api/v1/auth")]
+[BranchScoped]
 public sealed class AuthController(IMediator mediator) : ControllerBase
 {
     public sealed record LoginRequest(string TenantCode, string Username, string Password, string? TotpCode, LoginDevice? Device);

@@ -60,7 +60,8 @@ describe('AuthService', () => {
       email: null,
       mustChangePassword: false,
       mfaEnabled: false,
-      permissions: ['Users.View'],
+      permissions: ['Users.View', 'Users.Manage'],
+      tenantWidePermissions: ['Users.View'],
       features: [],
       branches: [],
     });
@@ -69,6 +70,10 @@ describe('AuthService', () => {
 
     expect(service.isAuthenticated()).toBeTrue();
     expect(service.hasPermission('Users.View')).toBeTrue();
-    expect(service.hasPermission('Users.Manage')).toBeFalse();
+    expect(service.hasPermission('Roles.Manage')).toBeFalse();
+    // Users.Manage came from a branch-level role only.
+    expect(service.hasPermission('Users.Manage')).toBeTrue();
+    expect(service.hasTenantWidePermission('Users.Manage')).toBeFalse();
+    expect(service.hasTenantWidePermission('Users.View')).toBeTrue();
   });
 });

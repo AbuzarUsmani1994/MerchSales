@@ -24,6 +24,7 @@ export class AuthService {
   readonly isAuthenticated = computed(() => this.accessTokenSignal() !== null);
   readonly me = this.meSignal.asReadonly();
   readonly permissions = computed<string[]>(() => this.meSignal()?.permissions ?? []);
+  readonly tenantWidePermissions = computed<string[]>(() => this.meSignal()?.tenantWidePermissions ?? []);
   readonly features = computed<string[]>(() => this.meSignal()?.features ?? []);
   readonly branches = computed<BranchSummary[]>(() => this.meSignal()?.branches ?? []);
 
@@ -33,6 +34,11 @@ export class AuthService {
 
   hasPermission(code: string): boolean {
     return this.permissions().includes(code);
+  }
+
+  /** True only when the permission comes from an all-branches role (branch managers get false). */
+  hasTenantWidePermission(code: string): boolean {
+    return this.tenantWidePermissions().includes(code);
   }
 
   hasFeature(key: string): boolean {

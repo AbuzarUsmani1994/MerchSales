@@ -10,6 +10,7 @@
     <ProjectReference Include="..\..\Modules\Tenancy\StockOrder.Modules.Tenancy\StockOrder.Modules.Tenancy.csproj" />
     <ProjectReference Include="..\..\Modules\Identity\StockOrder.Modules.Identity\StockOrder.Modules.Identity.csproj" />
     <ProjectReference Include="..\..\Modules\Platform\StockOrder.Modules.Platform\StockOrder.Modules.Platform.csproj" />
+    <ProjectReference Include="..\..\Modules\Inventory\StockOrder.Modules.Inventory\StockOrder.Modules.Inventory.csproj" />
   </ItemGroup>
 
   <ItemGroup>

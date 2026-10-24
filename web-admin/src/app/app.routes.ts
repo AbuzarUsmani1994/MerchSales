@@ -24,7 +24,7 @@ export const routes: Routes = [
       {
         path: 'setup/roles',
         loadComponent: () => import('./features/setup/roles.component').then((m) => m.RolesComponent),
-        canActivate: [permissionGuard('Roles.Manage')],
+        canActivate: [permissionGuard('Roles.Manage', { tenantWide: true })],
       },
       {
         path: 'setup/branches',
@@ -35,12 +35,12 @@ export const routes: Routes = [
         path: 'setup/features',
         loadComponent: () =>
           import('./features/setup/feature-toggles.component').then((m) => m.FeatureTogglesComponent),
-        canActivate: [permissionGuard('Settings.Manage')],
+        canActivate: [permissionGuard('Settings.Manage', { tenantWide: true })],
       },
       {
         path: 'setup/devices',
         loadComponent: () => import('./features/setup/devices.component').then((m) => m.DevicesComponent),
-        canActivate: [permissionGuard('Devices.Manage')],
+        canActivate: [permissionGuard('Devices.Manage', { tenantWide: true })],
       },
       {
         path: 'platform/tenants',

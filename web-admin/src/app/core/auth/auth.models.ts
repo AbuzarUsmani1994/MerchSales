@@ -29,6 +29,8 @@ export interface BranchSummary {
   id: string;
   code: string;
   name: string;
+  address: string | null;
+  phone: string | null;
   isActive: boolean;
 }
 
@@ -39,7 +41,10 @@ export interface MeResponse {
   email: string | null;
   mustChangePassword: boolean;
   mfaEnabled: boolean;
+  /** Held at any branch. */
   permissions: string[];
+  /** Held through an all-branches role; tenant-wide screens (roles, settings, new branches) need these. */
+  tenantWidePermissions: string[];
   features: string[];
   branches: BranchSummary[];
 }

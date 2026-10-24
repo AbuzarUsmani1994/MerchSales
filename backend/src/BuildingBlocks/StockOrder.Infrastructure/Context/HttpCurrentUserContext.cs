@@ -24,10 +24,6 @@ public sealed class HttpCurrentUserContext(IHttpContextAccessor httpContextAcces
 
     public Guid? DeviceId => Guid.TryParse(User?.FindFirstValue("did"), out var id) ? id : null;
 
-    // Branch scoping (section 6) is read directly from identity.UserRole by the handlers
-    // that need it in Phase 1 (Sales, Inventory); no Phase 0 feature filters by branch yet.
-    public IReadOnlyCollection<Guid> AllowedBranchIds => [];
-
     public bool IsPlatformAdmin => TenantCode == "PLATFORM";
 
     private Guid ParseClaim(params string[] claimTypes)

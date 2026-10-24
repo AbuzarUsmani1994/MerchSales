@@ -12,16 +12,18 @@ interface NavEntry {
   icon: string;
   routerLink: string;
   permission: string;
+  /** The API only accepts this permission from an all-branches role for these screens. */
+  tenantWide?: boolean;
   feature?: string;
 }
 
 /** Built from the signed-in user's permissions/features (section 13). */
 const NAV_ENTRIES: NavEntry[] = [
   { label: 'Users', icon: 'people', routerLink: '/setup/users', permission: 'Users.View' },
-  { label: 'Roles', icon: 'shield', routerLink: '/setup/roles', permission: 'Roles.Manage' },
+  { label: 'Roles', icon: 'shield', routerLink: '/setup/roles', permission: 'Roles.Manage', tenantWide: true },
   { label: 'Branches', icon: 'store', routerLink: '/setup/branches', permission: 'Branches.Manage' },
-  { label: 'Feature toggles', icon: 'tune', routerLink: '/setup/features', permission: 'Settings.Manage' },
-  { label: 'Devices', icon: 'smartphone', routerLink: '/setup/devices', permission: 'Devices.Manage' },
+  { label: 'Feature toggles', icon: 'tune', routerLink: '/setup/features', permission: 'Settings.Manage', tenantWide: true },
+  { label: 'Devices', icon: 'smartphone', routerLink: '/setup/devices', permission: 'Devices.Manage', tenantWide: true },
   { label: 'Platform tenants', icon: 'public', routerLink: '/platform/tenants', permission: 'Platform.Tenants.Manage' },
 ];
 
@@ -65,7 +67,9 @@ export class LayoutComponent {
 
   readonly menuItems = computed<NavEntry[]>(() =>
     NAV_ENTRIES.filter(
-      (entry) => this.auth.hasPermission(entry.permission) && (!entry.feature || this.auth.hasFeature(entry.feature)),
+      (entry) =>
+        (entry.tenantWide ? this.auth.hasTenantWidePermission(entry.permission) : this.auth.hasPermission(entry.permission)) &&
+        (!entry.feature || this.auth.hasFeature(entry.feature)),
     ),
   );
 

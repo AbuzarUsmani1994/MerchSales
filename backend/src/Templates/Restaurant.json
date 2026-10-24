@@ -55,7 +55,7 @@
       "name": "Manager",
       "isSystem": true,
       "permissions": [
-        "Users.View", "Devices.Manage", "Settings.Manage", "Branches.Manage", "Audit.View",
+        "Users.View", "Users.Manage", "Devices.Manage", "Settings.Manage", "Branches.Manage", "Audit.View",
         "Catalog.View", "Catalog.Manage", "Catalog.Import", "Pricing.View", "Pricing.Manage",
         "Inventory.View", "Inventory.Cost.View", "Inventory.Document.Create", "Inventory.Document.Post",
         "Inventory.Document.Approve", "Inventory.Transfer.Create", "Inventory.Transfer.Receive",

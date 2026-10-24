@@ -44,9 +44,13 @@ public sealed class CreateRoleCommandHandler(IdentityDbContext db, ICurrentUserC
 
 public sealed record SetRolePermissionsCommand(Guid RoleId, IReadOnlyList<string> PermissionCodes) : ICommand<Result>;
 
-public sealed class SetRolePermissionsCommandHandler(IdentityDbContext db, ICurrentUserContext currentUser)
+public sealed class SetRolePermissionsCommandHandler(
+    IdentityDbContext db, ICurrentUserContext currentUser, IAccessScope accessScope)
     : ICommandHandler<SetRolePermissionsCommand, Result>
 {
+    /// <summary>Every role keeps this one; see 013_SelfServicePermission.sql.</summary>
+    private const string SelfServicePermission = "Identity.Self.Manage";
+
     public async ValueTask<Result> Handle(SetRolePermissionsCommand command, CancellationToken ct)
     {
         var role = await db.Roles.FirstOrDefaultAsync(r => r.TenantId == currentUser.TenantId && r.Id == command.RoleId, ct);
@@ -55,15 +59,35 @@ public sealed class SetRolePermissionsCommandHandler(IdentityDbContext db, ICurr
             return Result.Failure(Error.NotFound("Role"));
         }
 
-        var validCodes = await db.Permissions
-            .Where(p => command.PermissionCodes.Contains(p.Code))
-            .Select(p => p.Code)
-            .ToListAsync(ct);
+        var requestedCodes = command.PermissionCodes.Append(SelfServicePermission).Distinct().ToList();
 
-        var unknown = command.PermissionCodes.Except(validCodes).ToList();
+        var catalogue = await db.Permissions
+            .Where(p => requestedCodes.Contains(p.Code))
+            .Select(p => new { p.Code, p.IsPlatformOnly })
+            .ToListAsync(ct);
+        var validCodes = catalogue.Select(p => p.Code).ToList();
+
+        var unknown = requestedCodes.Except(validCodes).ToList();
         if (unknown.Count > 0)
         {
             return Result.Failure(Error.Validation($"Unknown permission code(s): {string.Join(", ", unknown)}"));
+        }
+
+        // Platform.* codes act across every tenant; only the operator tenant may hold them.
+        var platformOnly = catalogue.Where(p => p.IsPlatformOnly).Select(p => p.Code).ToList();
+        if (platformOnly.Count > 0 && !currentUser.IsPlatformAdmin)
+        {
+            return Result.Failure(Error.PermissionDenied(
+                $"Platform permissions can't be given to a tenant role: {string.Join(", ", platformOnly)}"));
+        }
+
+        var currentCodes = await db.GetRolePermissionCodesAsync(currentUser.TenantId, role.Id, ct);
+        var callerHoldsRole = await db.UserRoles.AnyAsync(
+            ur => ur.TenantId == currentUser.TenantId && ur.UserId == currentUser.UserId && ur.RoleId == role.Id, ct);
+        var grants = await accessScope.GetGrantsAsync(ct);
+        if (UserAdministrationPolicy.CanSetRolePermissions(grants, callerHoldsRole, currentCodes, validCodes) is { } denied)
+        {
+            return Result.Failure(denied);
         }
 
         var existing = await db.RolePermissions

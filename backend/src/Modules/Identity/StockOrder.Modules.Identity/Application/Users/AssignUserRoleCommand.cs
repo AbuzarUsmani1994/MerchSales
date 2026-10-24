@@ -3,6 +3,7 @@ using Mediator;
 using Microsoft.EntityFrameworkCore;
 using StockOrder.Modules.Identity.Domain;
 using StockOrder.Modules.Identity.Infrastructure;
+using StockOrder.Modules.Tenancy.Contracts;
 using StockOrder.SharedKernel.Context;
 using StockOrder.SharedKernel.Errors;
 using StockOrder.SharedKernel.Ids;
@@ -21,7 +22,12 @@ public sealed class AssignUserRoleCommandValidator : AbstractValidator<AssignUse
     }
 }
 
-public sealed class AssignUserRoleCommandHandler(IdentityDbContext db, ICurrentUserContext currentUser, IIdGenerator idGenerator)
+public sealed class AssignUserRoleCommandHandler(
+    IdentityDbContext db,
+    ICurrentUserContext currentUser,
+    IAccessScope accessScope,
+    IBranchQueries branchQueries,
+    IIdGenerator idGenerator)
     : ICommandHandler<AssignUserRoleCommand, Result>
 {
     public async ValueTask<Result> Handle(AssignUserRoleCommand command, CancellationToken ct)
@@ -31,6 +37,28 @@ public sealed class AssignUserRoleCommandHandler(IdentityDbContext db, ICurrentU
         if (user is null || !roleExists)
         {
             return Result.Failure(Error.NotFound("User or role"));
+        }
+
+        if (command.BranchId is { } branchId)
+        {
+            var branch = await branchQueries.GetBranchAsync(currentUser.TenantId, branchId, ct);
+            if (branch is null || !branch.IsActive)
+            {
+                return Result.Failure(Error.NotFound("Branch"));
+            }
+        }
+
+        var grants = await accessScope.GetGrantsAsync(ct);
+        var heldRoles = await db.GetHeldRolesAsync(currentUser.TenantId, user.Id, ct);
+        if (UserAdministrationPolicy.CanManageUser(grants, heldRoles, user.DefaultBranchId) is { } cannotManage)
+        {
+            return Result.Failure(cannotManage);
+        }
+
+        var rolePermissions = await db.GetRolePermissionCodesAsync(currentUser.TenantId, command.RoleId, ct);
+        if (UserAdministrationPolicy.CanAssignRole(grants, rolePermissions, command.BranchId) is { } cannotAssign)
+        {
+            return Result.Failure(cannotAssign);
         }
 
         var alreadyAssigned = await db.UserRoles.AnyAsync(
@@ -54,7 +82,7 @@ public sealed class AssignUserRoleCommandHandler(IdentityDbContext db, ICurrentU
 
 public sealed record RemoveUserRoleCommand(Guid UserRoleId) : ICommand<Result>;
 
-public sealed class RemoveUserRoleCommandHandler(IdentityDbContext db, ICurrentUserContext currentUser)
+public sealed class RemoveUserRoleCommandHandler(IdentityDbContext db, ICurrentUserContext currentUser, IAccessScope accessScope)
     : ICommandHandler<RemoveUserRoleCommand, Result>
 {
     public async ValueTask<Result> Handle(RemoveUserRoleCommand command, CancellationToken ct)
@@ -66,10 +94,27 @@ public sealed class RemoveUserRoleCommandHandler(IdentityDbContext db, ICurrentU
             return Result.Failure(Error.NotFound("UserRole"));
         }
 
+        // Guards against an admin locking themselves (and possibly the whole tenant) out.
+        if (userRole.UserId == currentUser.UserId)
+        {
+            return Result.Failure(Error.PermissionDenied("You can't remove your own roles; ask another administrator."));
+        }
+
         var user = await db.Users.FirstOrDefaultAsync(u => u.TenantId == currentUser.TenantId && u.Id == userRole.UserId, ct);
+        if (user is null)
+        {
+            return Result.Failure(Error.NotFound("User"));
+        }
+
+        var grants = await accessScope.GetGrantsAsync(ct);
+        var heldRoles = await db.GetHeldRolesAsync(currentUser.TenantId, user.Id, ct);
+        if (UserAdministrationPolicy.CanManageUser(grants, heldRoles, user.DefaultBranchId) is { } denied)
+        {
+            return Result.Failure(denied);
+        }
 
         db.UserRoles.Remove(userRole);
-        user?.RotateSecurityStamp();
+        user.RotateSecurityStamp();
 
         await db.SaveChangesAsync(ct);
         return Result.Success();

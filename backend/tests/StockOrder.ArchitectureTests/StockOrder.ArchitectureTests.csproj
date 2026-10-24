@@ -13,6 +13,8 @@
     <ProjectReference Include="..\..\src\Modules\Identity\StockOrder.Modules.Identity.Contracts\StockOrder.Modules.Identity.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Modules\Platform\StockOrder.Modules.Platform\StockOrder.Modules.Platform.csproj" />
     <ProjectReference Include="..\..\src\Modules\Platform\StockOrder.Modules.Platform.Contracts\StockOrder.Modules.Platform.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Inventory\StockOrder.Modules.Inventory\StockOrder.Modules.Inventory.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Inventory\StockOrder.Modules.Inventory.Contracts\StockOrder.Modules.Inventory.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Hosts\StockOrder.Api\StockOrder.Api.csproj" />
   </ItemGroup>
 

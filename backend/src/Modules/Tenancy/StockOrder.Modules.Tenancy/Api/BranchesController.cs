@@ -12,12 +12,14 @@ public sealed class BranchesController(IMediator mediator) : ControllerBase
 {
     [HttpGet]
     [Authorize(Policy = "Branches.Manage")]
+    [BranchScoped]
     public async Task<IActionResult> List(CancellationToken ct)
     {
         var result = await mediator.Send(new GetBranchesQuery(), ct);
         return result.ToActionResult();
     }
 
+    /// <summary>Tenant-wide (not <see cref="BranchScopedAttribute"/>): branch managers can't create branches.</summary>
     [HttpPost]
     [Authorize(Policy = "Branches.Manage")]
     public async Task<IActionResult> Create(CreateBranchCommand command, CancellationToken ct)

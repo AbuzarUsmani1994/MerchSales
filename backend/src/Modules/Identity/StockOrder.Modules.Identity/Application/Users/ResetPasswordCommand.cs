@@ -13,17 +13,31 @@ namespace StockOrder.Modules.Identity.Application.Users;
 
 public sealed record ResetPasswordCommand(Guid UserId) : ICommand<Result<string>>;
 
-public sealed class ResetPasswordCommandHandler(IdentityDbContext db, ICurrentUserContext currentUser, IClock clock)
+public sealed class ResetPasswordCommandHandler(
+    IdentityDbContext db, ICurrentUserContext currentUser, IAccessScope accessScope, IClock clock)
     : ICommandHandler<ResetPasswordCommand, Result<string>>
 {
     private static readonly PasswordHasher<User> PasswordHasher = new();
 
     public async ValueTask<Result<string>> Handle(ResetPasswordCommand command, CancellationToken ct)
     {
+        if (command.UserId == currentUser.UserId)
+        {
+            return Result.Failure<string>(Error.PermissionDenied("Use change password for your own account."));
+        }
+
         var user = await db.Users.FirstOrDefaultAsync(u => u.TenantId == currentUser.TenantId && u.Id == command.UserId, ct);
         if (user is null)
         {
             return Result.Failure<string>(Error.NotFound("User"));
+        }
+
+        // Without this, a branch manager could reset the Owner's password and sign in as them.
+        var grants = await accessScope.GetGrantsAsync(ct);
+        var heldRoles = await db.GetHeldRolesAsync(currentUser.TenantId, user.Id, ct);
+        if (UserAdministrationPolicy.CanManageUser(grants, heldRoles, user.DefaultBranchId) is { } denied)
+        {
+            return Result.Failure<string>(denied);
         }
 
         var oneTimePassword = OneTimePasswordGenerator.Generate();

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
-using StockOrder.Infrastructure.Caching;
+using StockOrder.Infrastructure.Api;
 using StockOrder.SharedKernel.Context;
 
 namespace StockOrder.Modules.Identity.Infrastructure.Authorization;
@@ -34,9 +34,10 @@ public sealed class PermissionPolicyProvider(IOptions<AuthorizationOptions> opti
 
 public sealed class PermissionAuthorizationHandler(
     ICurrentUserContext currentUser,
-    IPermissionCache permissionCache,
-    IdentityDbContext db) : AuthorizationHandler<PermissionRequirement>
+    IAccessScope accessScope) : AuthorizationHandler<PermissionRequirement>
 {
+    private const string PlatformPermissionPrefix = "Platform.";
+
     protected override async Task HandleRequirementAsync(
         AuthorizationHandlerContext context, PermissionRequirement requirement)
     {
@@ -45,30 +46,35 @@ public sealed class PermissionAuthorizationHandler(
             return;
         }
 
-        var securityStamp = await db.Users
-            .Where(u => u.TenantId == currentUser.TenantId && u.Id == currentUser.UserId)
-            .Select(u => u.SecurityStamp)
-            .FirstOrDefaultAsync();
+        // Platform.* codes are meaningful only inside the operator tenant. Checked here as well
+        // as when role permissions are saved, so a tenant role that somehow holds one still
+        // can't reach the cross-tenant endpoints.
+        if (requirement.PermissionCode.StartsWith(PlatformPermissionPrefix, StringComparison.Ordinal) &&
+            !currentUser.IsPlatformAdmin)
+        {
+            return;
+        }
 
-        var permissions = await permissionCache.GetOrCreateAsync(
-            currentUser.TenantId,
-            currentUser.UserId,
-            securityStamp,
-            async innerCt => (IReadOnlyList<string>)await db.RolePermissions
-                .Where(rp => rp.TenantId == currentUser.TenantId &&
-                             db.UserRoles.Any(ur => ur.TenantId == currentUser.TenantId &&
-                                                     ur.UserId == currentUser.UserId &&
-                                                     ur.RoleId == rp.RoleId))
-                .Select(rp => rp.PermissionCode)
-                .Distinct()
-                .ToListAsync(innerCt),
-            CancellationToken.None);
+        var grants = await accessScope.GetGrantsAsync(CancellationToken.None);
+        var acceptsBranchGrant = IsBranchScopedEndpoint(context.Resource);
 
         // PlatformAdmin is an ordinary role whose RolePermission rows happen to include every
         // Platform.* code (section 10) — no special-cased bypass here on purpose.
-        if (permissions.Contains(requirement.PermissionCode))
+        if (grants.Any(g => g.Code == requirement.PermissionCode && (g.BranchId is null || acceptsBranchGrant)))
         {
             context.Succeed(requirement);
         }
+    }
+
+    private static bool IsBranchScopedEndpoint(object? resource)
+    {
+        var endpoint = resource switch
+        {
+            HttpContext httpContext => httpContext.GetEndpoint(),
+            Endpoint e => e,
+            _ => null,
+        };
+
+        return endpoint?.Metadata.GetMetadata<BranchScopedAttribute>() is not null;
     }
 }

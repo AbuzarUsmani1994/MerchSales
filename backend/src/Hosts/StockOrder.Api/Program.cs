@@ -17,6 +17,7 @@ using StockOrder.Infrastructure.Logging;
 using StockOrder.Infrastructure.Mobile;
 using StockOrder.Infrastructure.Startup;
 using StockOrder.Modules.Identity;
+using StockOrder.Modules.Inventory;
 using StockOrder.Modules.Platform;
 using StockOrder.Modules.Platform.Infrastructure.Bootstrap;
 using StockOrder.Modules.Tenancy;
@@ -38,10 +39,12 @@ builder.Services.AddStockOrderInfrastructure(builder.Configuration);
 builder.Services.AddTenancyModule();
 builder.Services.AddIdentityModule();
 builder.Services.AddPlatformModule();
+builder.Services.AddInventoryModule();
 
 builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Tenancy.TenancyModule).Assembly);
 builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Identity.IdentityModule).Assembly);
 builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Platform.PlatformModule).Assembly);
+builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Inventory.InventoryModule).Assembly);
 
 builder.Services.AddMediator(options =>
 {

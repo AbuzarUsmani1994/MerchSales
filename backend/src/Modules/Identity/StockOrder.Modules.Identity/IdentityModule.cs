@@ -16,6 +16,7 @@ public static class IdentityModule
             (sp, options) => new IdentityDbContext(options, sp.GetRequiredService<ICurrentUserContext>()));
 
         services.AddScoped<IPermissionLoader, PermissionLoader>();
+        services.AddScoped<IAccessScope, UserAccessScope>();
         services.AddSingleton<IMfaSecretProtector, MfaSecretProtector>();
 
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();

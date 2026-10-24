@@ -15,15 +15,19 @@ public sealed class Branch : AuditedTenantEntity
     {
     }
 
-    private Branch(Guid tenantId, Guid id, string code, string name, DateTime nowUtc, Guid? createdBy)
+    private Branch(
+        Guid tenantId, Guid id, string code, string name, string? address, string? phone, DateTime nowUtc, Guid? createdBy)
         : base(tenantId, id, nowUtc, createdBy)
     {
         Code = code;
         Name = name;
+        Address = address;
+        Phone = phone;
     }
 
-    public static Branch Create(Guid tenantId, Guid id, string code, string name, DateTime nowUtc, Guid? createdBy) =>
-        new(tenantId, id, code, name, nowUtc, createdBy);
+    public static Branch Create(
+        Guid tenantId, Guid id, string code, string name, string? address, string? phone, DateTime nowUtc, Guid? createdBy) =>
+        new(tenantId, id, code, name, address, phone, nowUtc, createdBy);
 
     public void Deactivate(DateTime nowUtc, Guid? updatedBy)
     {
