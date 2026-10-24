@@ -87,10 +87,19 @@ function Sync-Files {
     if ($ExcludeDirs.Count -gt 0) { $robocopyArgs += "/XD"; $robocopyArgs += $ExcludeDirs }
 
     robocopy @robocopyArgs | Out-Null
-    # Robocopy's exit codes 0-7 are all "success" (8+ means a real failure).
+    # Robocopy's exit codes 0-7 are all "success" (8+ means a real failure). But a
+    # successful non-zero code (e.g. 1 = files copied) otherwise survives as the last
+    # $LASTEXITCODE set anywhere in the script -- and since nothing else resets it,
+    # powershell.exe's own process exit code mirrors it when the script ends, which
+    # GitHub Actions reads as step failure even though the deploy fully succeeded
+    # (discovered deploying StockOrder.Api to 116.58.33.11: "deployed and healthy"
+    # printed, then "Process completed with exit code 1" anyway). Reset it explicitly.
     if ($LASTEXITCODE -ge 8) {
-        throw "robocopy failed copying $Source -> $Destination (exit code $LASTEXITCODE)"
+        $code = $LASTEXITCODE
+        $LASTEXITCODE = 0
+        throw "robocopy failed copying $Source -> $Destination (exit code $code)"
     }
+    $LASTEXITCODE = 0
 }
 
 function Wait-ForHealthy {
