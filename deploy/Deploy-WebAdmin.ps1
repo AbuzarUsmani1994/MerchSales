@@ -1,9 +1,9 @@
-<#
+﻿<#
 .SYNOPSIS
   Deploys the Angular back-office build as static files to IIS, writes a fresh
   config.json pointing at this server's own API, and ensures the SPA URL Rewrite rule
   exists (section 13: "unknown routes to index.html"). Requires the IIS URL Rewrite
-  module to already be installed (see docs/deploy-runbook.md) — that's a separate IIS
+  module to already be installed (see docs/deploy-runbook.md) -- that's a separate IIS
   extension this script cannot install itself.
 #>
 param(
@@ -27,7 +27,7 @@ if (-not (Test-Path $SourcePath)) {
 Ensure-AppPool -Name $AppPoolName
 Stop-AppPoolIfRunning -Name $AppPoolName
 
-# config.json and web.config are written fresh below, after the copy — excluded here so
+# config.json and web.config are written fresh below, after the copy -- excluded here so
 # robocopy's /MIR doesn't delete them as "extra" files not present in the build output.
 Sync-Files -Source $SourcePath -Destination $PhysicalPath -ExcludeFiles @("config.json", "web.config")
 

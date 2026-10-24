@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Deploys a published StockOrder.Api build to IIS. Idempotent: creates the app pool and
   site on first run, just syncs files and restarts on every run after that.
@@ -34,7 +34,7 @@ if (-not (Test-Path $SourcePath)) {
 Ensure-AppPool -Name $AppPoolName
 Stop-AppPoolIfRunning -Name $AppPoolName
 
-# appsettings.*.json ship from the repo (no secrets in them — section 17); never overwrite
+# appsettings.*.json ship from the repo (no secrets in them -- section 17); never overwrite
 # the environment variables a prior manual setup already configured at the machine level,
 # and never touch logs/ so Serilog's rolling files survive a redeploy.
 Sync-Files -Source $SourcePath -Destination $PhysicalPath -ExcludeDirs @("logs")

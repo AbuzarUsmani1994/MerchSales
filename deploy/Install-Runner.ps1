@@ -1,11 +1,11 @@
-<#
+﻿<#
 .SYNOPSIS
   One-time setup of the self-hosted GitHub Actions runner on this server (section 17.1,
   docs/deploy-runbook.md step 6). Run as Administrator, on 116.58.33.11 itself.
 
 .PARAMETER Token
   The registration token from GitHub: Settings -> Actions -> Runners -> New self-hosted
-  runner. Expires ~1 hour after being issued — if this script fails with an auth error,
+  runner. Expires ~1 hour after being issued -- if this script fails with an auth error,
   get a fresh token and re-run.
 
 .EXAMPLE

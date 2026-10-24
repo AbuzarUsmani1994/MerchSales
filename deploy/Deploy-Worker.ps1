@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   Deploys a published StockOrder.Worker build as a Windows Service. Idempotent: creates
   the service on first run, stops/replaces files/starts on every run after that.
@@ -33,7 +33,7 @@ Sync-Files -Source $SourcePath -Destination $PhysicalPath -ExcludeDirs @("logs")
 
 $exePath = Join-Path $PhysicalPath "StockOrder.Worker.exe"
 if (-not (Test-Path $exePath)) {
-    throw "Expected $exePath after copy — check the published artifact contains the Worker executable."
+    throw "Expected $exePath after copy -- check the published artifact contains the Worker executable."
 }
 
 if (-not $existingService) {
@@ -41,7 +41,7 @@ if (-not $existingService) {
     New-Service -Name $ServiceName -BinaryPathName $exePath -DisplayName "StockOrder Worker" `
         -StartupType Automatic -Description "StockOrder outbox dispatcher + Hangfire server (section 15)." | Out-Null
 } else {
-    # BinaryPathName can change between versions of .NET/publish settings — keep it in sync.
+    # BinaryPathName can change between versions of .NET/publish settings -- keep it in sync.
     sc.exe config $ServiceName binPath= "`"$exePath`"" | Out-Null
 }
 

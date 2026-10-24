@@ -1,4 +1,4 @@
-# Shared helpers for the deploy scripts. Dot-sourced, not run directly.
+﻿# Shared helpers for the deploy scripts. Dot-sourced, not run directly.
 # All functions are idempotent: safe to run on every deploy, not just the first one.
 
 function Ensure-AppPool {
@@ -27,7 +27,7 @@ function Stop-AppPoolIfRunning {
         if ($state.Value -eq "Started") {
             Write-Host "Stopping app pool '$Name'..."
             Stop-WebAppPool -Name $Name
-            # File locks release asynchronously — give IIS a moment.
+            # File locks release asynchronously -- give IIS a moment.
             Start-Sleep -Seconds 3
         }
     }
@@ -108,10 +108,10 @@ function Wait-ForHealthy {
                 return
             }
         } catch {
-            # Not up yet — keep polling until the deadline.
+            # Not up yet -- keep polling until the deadline.
         }
         Start-Sleep -Seconds 2
     }
 
-    throw "$Url did not become healthy within $TimeoutSeconds seconds. Deploy failed — check the application event log / Serilog files before retrying."
+    throw "$Url did not become healthy within $TimeoutSeconds seconds. Deploy failed -- check the application event log / Serilog files before retrying."
 }
