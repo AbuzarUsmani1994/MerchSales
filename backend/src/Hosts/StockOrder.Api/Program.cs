@@ -131,7 +131,15 @@ await using (var scope = app.Services.CreateAsyncScope())
 app.UseForwardedHeaders();
 app.UseExceptionHandler();
 
-if (app.Environment.IsDevelopment())
+// Spec section 2 says Scalar UI is Development-only (avoids exposing the API schema/
+// endpoint list publicly). Deviation, like the JWT-vs-OpenIddict one already noted in
+// section 2: exposed in Production too when OpenApi:EnableInProduction is explicitly
+// set (env var OpenApi__EnableInProduction=true), because the operator wants a
+// browsable API UI without building out every screen in the Angular app first. Off by
+// default even in Production, so a tenant deployment doesn't get this for free.
+var enableOpenApiUi = app.Environment.IsDevelopment()
+    || builder.Configuration.GetValue<bool>("OpenApi:EnableInProduction");
+if (enableOpenApiUi)
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
