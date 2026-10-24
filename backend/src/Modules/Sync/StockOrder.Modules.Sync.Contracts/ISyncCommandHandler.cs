@@ -36,6 +36,7 @@ public sealed record SyncCommandOutcome(SyncCommandStatus Status, string? ErrorC
 public static class SyncErrorCodes
 {
     public const string DependencyRejected = "DEPENDENCY_REJECTED";
+    public const string DependencyFailed = "DEPENDENCY_FAILED";
     public const string UnknownCommandType = "UNKNOWN_COMMAND_TYPE";
     public const string InvalidPayload = "INVALID_PAYLOAD";
 }

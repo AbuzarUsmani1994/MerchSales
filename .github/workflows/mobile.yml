@@ -16,7 +16,9 @@ on:
         options: [dev, prod]
 
 env:
-  FLUTTER_VERSION: "3.27.1"
+  # Pinned (section 17.1). The app needs Dart >= 3.8 and the package:sqlite3 build hooks
+  # that bundle SQLCipher, so older Flutter releases can't build it.
+  FLUTTER_VERSION: "3.47.8"
 
 jobs:
   build:
@@ -28,20 +30,58 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
           channel: stable
           cache: true
 
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('mobile/android/**/*.gradle.kts', 'mobile/android/gradle/wrapper/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
       - name: Pub get
         run: flutter pub get
+
+      - name: Generate code (Drift database, localizations)
+        run: |
+          dart run build_runner build --delete-conflicting-outputs
+          flutter gen-l10n
 
       - name: Analyze
         run: flutter analyze
 
       - name: Test
         run: flutter test
+
+      - name: Determine flavor and version
+        id: flavor
+        run: |
+          FLAVOR="${{ github.event.inputs.flavor || 'dev' }}"
+          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //;s/+.*//')
+          echo "flavor=$FLAVOR" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Check API_BASE_URL
+        env:
+          API_BASE_URL: ${{ vars.API_BASE_URL }}
+        run: |
+          if [ -z "$API_BASE_URL" ]; then
+            echo "::warning::Repository variable API_BASE_URL is not set — the app will build but can't sign in. See docs/mobile-build.md."
+          elif [ "${{ steps.flavor.outputs.flavor }}" = "prod" ] && [[ "$API_BASE_URL" != https://* ]]; then
+            echo "::error::The prod flavor only talks HTTPS, but API_BASE_URL is '$API_BASE_URL'. Build the dev flavor, or put the API behind HTTPS first."
+            exit 1
+          fi
 
       - name: Decode google-services.json (optional — push disabled if absent)
         if: ${{ env.GOOGLE_SERVICES_JSON_BASE64 != '' }}
@@ -72,12 +112,6 @@ jobs:
           storeFile=release.keystore
           EOF
 
-      - name: Determine flavor
-        id: flavor
-        run: |
-          FLAVOR="${{ github.event.inputs.flavor || 'dev' }}"
-          echo "flavor=$FLAVOR" >> "$GITHUB_OUTPUT"
-
       - name: Build APK
         env:
           API_BASE_URL: ${{ vars.API_BASE_URL }}
@@ -86,16 +120,19 @@ jobs:
           if [ "${{ steps.keystore.outputs.hasKeystore }}" = "true" ]; then
             BUILD_MODE="--release"
           fi
-          flutter build apk $BUILD_MODE --dart-define=API_BASE_URL="$API_BASE_URL"
+          flutter build apk $BUILD_MODE --flavor "${{ steps.flavor.outputs.flavor }}" \
+            --dart-define=API_BASE_URL="$API_BASE_URL" \
+            --dart-define=FLAVOR="${{ steps.flavor.outputs.flavor }}" \
+            --dart-define=APP_VERSION="${{ steps.flavor.outputs.version }}"
 
       - name: Rename artifact
         id: artifact
         run: |
-          VERSION=$(grep '^version:' pubspec.yaml | sed 's/version: //;s/+.*//')
+          FLAVOR="${{ steps.flavor.outputs.flavor }}"
           MODE="debug"
           if [ "${{ steps.keystore.outputs.hasKeystore }}" = "true" ]; then MODE="release"; fi
-          NAME="app-${{ steps.flavor.outputs.flavor }}-$VERSION-$MODE.apk"
-          SRC="build/app/outputs/flutter-apk/app-$MODE.apk"
+          NAME="app-$FLAVOR-${{ steps.flavor.outputs.version }}-$MODE.apk"
+          SRC="build/app/outputs/flutter-apk/app-$FLAVOR-$MODE.apk"
           cp "$SRC" "build/app/outputs/flutter-apk/$NAME"
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
 

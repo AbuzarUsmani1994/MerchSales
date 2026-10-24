@@ -1,12 +1,21 @@
-/// Build-time config (section 17.1): the CI workflow passes the API host via
-/// `--dart-define=API_BASE_URL=...` from the repository variable of the same name, never
-/// hardcoded or committed to the repo.
-class AppConfig {
-  static const String apiBaseUrl = String.fromEnvironment(
-    'API_BASE_URL',
-    defaultValue: 'http://10.0.2.2:5280',
-  );
+import 'dart:io' show Platform;
 
-  static const String appVersion = '1.0.0';
-  static const String platform = 'Android';
+/// Build-time config (section 17.1): the CI workflow passes these with `--dart-define`, from
+/// the repository variable API_BASE_URL and the chosen flavor — never hardcoded in the repo.
+class AppConfig {
+  static const String _apiBaseUrl = String.fromEnvironment('API_BASE_URL');
+
+  /// `dev` (debug-signed, may use plain HTTP to a LAN server) or `prod` (HTTPS only).
+  static const String flavor = String.fromEnvironment('FLAVOR', defaultValue: 'dev');
+
+  /// Sent as X-App-Version so the server can enforce its minimum version (section 9).
+  static const String appVersion = String.fromEnvironment('APP_VERSION', defaultValue: '1.0.0');
+
+  /// Empty when the build had no API_BASE_URL; the login screen says so instead of failing
+  /// with an unreadable network error.
+  static String get apiBaseUrl => _apiBaseUrl.endsWith('/') ? _apiBaseUrl.substring(0, _apiBaseUrl.length - 1) : _apiBaseUrl;
+
+  static bool get isServerConfigured => apiBaseUrl.isNotEmpty;
+
+  static String get platform => Platform.isIOS ? 'iOS' : 'Android';
 }

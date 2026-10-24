@@ -22,9 +22,15 @@ public sealed record SyncPushResult(IReadOnlyList<SyncCommandResult> Results);
 
 /// <summary>
 /// Section 12 push. Commands run in clientSequence order, each isolated by a savepoint (the
-/// request already holds one transaction, section 5.4): a rejected or failed command undoes
-/// only its own writes, and the outcome is stored in sync.CommandLog either way, so sending
-/// the same command id again replays the stored result instead of applying it twice.
+/// request already holds one transaction, section 5.4), so a rejected or failed command undoes
+/// only its own writes.
+/// <list type="bullet">
+/// <item>Applied and Rejected outcomes are final: stored in sync.CommandLog, and sending the
+/// same command id again replays the stored result instead of applying it twice.</item>
+/// <item>Failed (an unexpected server error, nothing written) is not stored, so the phone
+/// retries it with the same id later. Commands that depend on it fail the same way for now,
+/// instead of being rejected for good.</item>
+/// </list>
 /// </summary>
 public sealed class SyncPushCommandHandler(
     IEnumerable<ISyncCommandHandler> handlers,
@@ -56,6 +62,7 @@ public sealed class SyncPushCommandHandler(
         var handlersByType = handlers.ToDictionary(h => h.CommandType, StringComparer.Ordinal);
         var transaction = (SqlTransaction)unitOfWork.Transaction!;
         var rejectedIds = new HashSet<Guid>();
+        var failedIds = new HashSet<Guid>();
         var results = new List<SyncCommandResult>();
 
         foreach (var item in command.Commands.OrderBy(c => c.ClientSequence))
@@ -63,7 +70,7 @@ public sealed class SyncPushCommandHandler(
             if (await FindStoredAsync(item.Id, ct) is { } stored)
             {
                 results.Add(stored);
-                if (stored.Status is "Rejected" or "Failed")
+                if (stored.Status == nameof(SyncCommandStatus.Rejected))
                 {
                     rejectedIds.Add(item.Id);
                 }
@@ -71,15 +78,22 @@ public sealed class SyncPushCommandHandler(
                 continue;
             }
 
-            var outcome = await ApplyAsync(item, deviceId, handlersByType, rejectedIds, transaction, ct);
+            var outcome = await ApplyAsync(item, deviceId, handlersByType, rejectedIds, failedIds, transaction, ct);
             var result = new SyncCommandResult(item.Id, outcome.Status.ToString(), outcome.ErrorCode, outcome.Message, outcome.Result);
-            if (outcome.Status is SyncCommandStatus.Rejected or SyncCommandStatus.Failed)
+            results.Add(result);
+
+            if (outcome.Status == SyncCommandStatus.Failed)
+            {
+                failedIds.Add(item.Id);
+                continue;
+            }
+
+            if (outcome.Status == SyncCommandStatus.Rejected)
             {
                 rejectedIds.Add(item.Id);
             }
 
             await StoreAsync(item, deviceId, result, ct);
-            results.Add(result);
         }
 
         return Result.Success(new SyncPushResult(results));
@@ -90,13 +104,22 @@ public sealed class SyncPushCommandHandler(
         Guid deviceId,
         Dictionary<string, ISyncCommandHandler> handlersByType,
         HashSet<Guid> rejectedIds,
+        HashSet<Guid> failedIds,
         SqlTransaction transaction,
         CancellationToken ct)
     {
-        if (await ReferencesRejectedCommandAsync(item, rejectedIds, ct))
+        var referenced = PayloadGuids.Find(item.Payload).Where(id => id != item.Id).ToHashSet();
+
+        if (await ReferencesRejectedCommandAsync(referenced, rejectedIds, ct))
         {
             return SyncCommandOutcome.Rejected(
                 SyncErrorCodes.DependencyRejected, "This command depends on an earlier command that was rejected.");
+        }
+
+        if (referenced.Overlaps(failedIds))
+        {
+            return new SyncCommandOutcome(
+                SyncCommandStatus.Failed, SyncErrorCodes.DependencyFailed, "Waiting for an earlier command that failed; will retry.", null);
         }
 
         if (!handlersByType.TryGetValue(item.Type, out var handler))
@@ -131,9 +154,8 @@ public sealed class SyncPushCommandHandler(
     /// rejected too. Any GUID string in the payload counts as a reference — client ids are
     /// GUIDs and appear wherever a later command points at an earlier one.
     /// </summary>
-    private async Task<bool> ReferencesRejectedCommandAsync(SyncPushCommandItem item, HashSet<Guid> rejectedIds, CancellationToken ct)
+    private async Task<bool> ReferencesRejectedCommandAsync(HashSet<Guid> referenced, HashSet<Guid> rejectedIds, CancellationToken ct)
     {
-        var referenced = PayloadGuids.Find(item.Payload).Where(id => id != item.Id).ToHashSet();
         if (referenced.Count == 0)
         {
             return false;
@@ -148,7 +170,7 @@ public sealed class SyncPushCommandHandler(
         var earlier = await unitOfWork.Connection.ExecuteScalarAsync<int>(new CommandDefinition(
             """
             SELECT COUNT(*) FROM sync.CommandLog
-            WHERE TenantId = @tenantId AND Id IN @ids AND Status IN ('Rejected', 'Failed');
+            WHERE TenantId = @tenantId AND Id IN @ids AND Status = 'Rejected';
             """,
             new { tenantId = currentUser.TenantId, ids = referenced },
             unitOfWork.Transaction,

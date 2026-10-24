@@ -6,32 +6,57 @@ import 'package:uuid/uuid.dart';
 import '../auth/token_storage.dart';
 import '../config/app_config.dart';
 
+/// Something the server said that the whole app must react to, wherever it happened.
+sealed class ApiEvent {
+  const ApiEvent();
+}
+
+/// DEVICE_REVOKED (section 9): sign out, and erase local data when [wipeRequested].
+final class DeviceRevokedEvent extends ApiEvent {
+  const DeviceRevokedEvent({required this.wipeRequested});
+  final bool wipeRequested;
+}
+
+/// APP_VERSION_UNSUPPORTED (426): block the app until it's updated.
+final class AppVersionUnsupportedEvent extends ApiEvent {
+  const AppVersionUnsupportedEvent({this.storeUrl});
+  final String? storeUrl;
+}
+
+/// The refresh token was rejected: the session is over and the user must sign in again.
+final class SessionExpiredEvent extends ApiEvent {
+  const SessionExpiredEvent();
+}
+
 /// Section 9: mobile requests send X-App-Version and X-Device-Id; the API enforces the
 /// minimum version and device revocation via these headers. Section 10: silent refresh on
 /// 401, with a single in-flight refresh shared across concurrent requests.
 class ApiClient {
-  ApiClient(this._tokenStorage) {
-    _dio = Dio(BaseOptions(baseUrl: AppConfig.apiBaseUrl));
+  ApiClient(this._tokenStorage, {Dio? dio, Dio? refreshDio}) {
+    _dio = dio ?? Dio(BaseOptions(baseUrl: AppConfig.apiBaseUrl, connectTimeout: _timeout, receiveTimeout: _timeout));
+    _refreshDio = refreshDio ?? Dio(BaseOptions(baseUrl: AppConfig.apiBaseUrl, connectTimeout: _timeout, receiveTimeout: _timeout));
     _dio.interceptors.add(InterceptorsWrapper(onRequest: _onRequest, onError: _onError));
   }
 
+  static const _timeout = Duration(seconds: 20);
+  static const _noRefreshPaths = {'/api/v1/auth/login', '/api/v1/auth/refresh', '/api/v1/auth/logout'};
+
   final TokenStorage _tokenStorage;
   late final Dio _dio;
+  late final Dio _refreshDio;
   Completer<String?>? _refreshCompleter;
 
-  final _deviceRevokedController = StreamController<bool>.broadcast();
+  final _events = StreamController<ApiEvent>.broadcast();
 
   Dio get dio => _dio;
 
-  /// Emits `wipeRequested` (section 10, 14) when the API reports DEVICE_REVOKED, for the
-  /// app shell to sign out — and wipe the local database, if requested — in one place.
-  Stream<bool> get onDeviceRevoked => _deviceRevokedController.stream;
+  Stream<ApiEvent> get events => _events.stream;
 
   Future<void> _onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
     final accessToken = await _tokenStorage.readAccessToken();
     final deviceId = await _tokenStorage.readDeviceId();
 
-    if (accessToken != null) {
+    if (accessToken != null && !options.headers.containsKey('Authorization')) {
       options.headers['Authorization'] = 'Bearer $accessToken';
     }
     if (deviceId != null) {
@@ -45,17 +70,22 @@ class ApiClient {
 
   Future<void> _onError(DioException error, ErrorInterceptorHandler handler) async {
     final response = error.response;
-    final code = (response?.data is Map) ? (response!.data as Map)['code'] as String? : null;
+    final data = response?.data;
+    final code = data is Map ? data['code'] as String? : null;
 
     if (code == 'DEVICE_REVOKED') {
-      final wipeRequested = (response!.data as Map)['wipeRequested'] as bool? ?? false;
-      await _tokenStorage.clear();
-      _deviceRevokedController.add(wipeRequested);
+      _events.add(DeviceRevokedEvent(wipeRequested: (data as Map)['wipeRequested'] as bool? ?? false));
       handler.next(error);
       return;
     }
 
-    if (response?.statusCode != 401) {
+    if (code == 'APP_VERSION_UNSUPPORTED' || response?.statusCode == 426) {
+      _events.add(const AppVersionUnsupportedEvent());
+      handler.next(error);
+      return;
+    }
+
+    if (response?.statusCode != 401 || _noRefreshPaths.contains(error.requestOptions.path)) {
       handler.next(error);
       return;
     }
@@ -91,8 +121,7 @@ class ApiClient {
         return null;
       }
 
-      final response = await Dio(BaseOptions(baseUrl: AppConfig.apiBaseUrl))
-          .post('/api/v1/auth/refresh', data: {'refreshToken': refreshToken});
+      final response = await _refreshDio.post('/api/v1/auth/refresh', data: {'refreshToken': refreshToken});
 
       final newAccessToken = response.data['accessToken'] as String;
       final newRefreshToken = response.data['refreshToken'] as String;
@@ -100,12 +129,28 @@ class ApiClient {
 
       completer.complete(newAccessToken);
       return newAccessToken;
-    } catch (_) {
-      await _tokenStorage.clear();
+    } on DioException catch (e) {
+      // Only a definite "no" from the server ends the session; being offline must not.
+      if (e.response != null) {
+        await _tokenStorage.clearSession();
+        _events.add(const SessionExpiredEvent());
+      }
       completer.complete(null);
       return null;
     } finally {
       _refreshCompleter = null;
     }
   }
+}
+
+/// A short, user-safe message from a failed request: the server's ProblemDetails `detail`,
+/// or null when there was no response at all (offline, timeout, DNS).
+String? problemDetail(DioException e) {
+  final data = e.response?.data;
+  return data is Map ? data['detail'] as String? : null;
+}
+
+String? problemCode(DioException e) {
+  final data = e.response?.data;
+  return data is Map ? data['code'] as String? : null;
 }
