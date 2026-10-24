@@ -9,10 +9,11 @@ public interface IPermissionLoader
     Task<IReadOnlyList<PermissionGrant>> LoadAsync(Guid tenantId, Guid userId, CancellationToken ct);
 }
 
-internal sealed class PermissionLoader(IdentityDbContext db) : IPermissionLoader
+internal sealed class PermissionLoader(Func<IdentityDbContext> dbFactory) : IPermissionLoader
 {
     public async Task<IReadOnlyList<PermissionGrant>> LoadAsync(Guid tenantId, Guid userId, CancellationToken ct)
     {
+        var db = dbFactory();
         var rows = await (
                 from ur in db.UserRoles
                 join rp in db.RolePermissions on new { ur.TenantId, ur.RoleId } equals new { rp.TenantId, rp.RoleId }

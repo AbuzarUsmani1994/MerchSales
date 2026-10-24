@@ -15,6 +15,8 @@ public static class IdentityModule
         services.AddModuleDbContext<IdentityDbContext>(
             (sp, options) => new IdentityDbContext(options, sp.GetRequiredService<ICurrentUserContext>()));
 
+        // Lazy access for services that are also constructed on anonymous requests (see UserAccessScope).
+        services.AddScoped<Func<IdentityDbContext>>(sp => sp.GetRequiredService<IdentityDbContext>);
         services.AddScoped<IPermissionLoader, PermissionLoader>();
         services.AddScoped<IAccessScope, UserAccessScope>();
         services.AddSingleton<IMfaSecretProtector, MfaSecretProtector>();
