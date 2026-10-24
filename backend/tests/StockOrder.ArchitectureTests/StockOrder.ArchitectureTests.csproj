@@ -17,6 +17,8 @@
     <ProjectReference Include="..\..\src\Modules\Inventory\StockOrder.Modules.Inventory.Contracts\StockOrder.Modules.Inventory.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Modules\Sync\StockOrder.Modules.Sync\StockOrder.Modules.Sync.csproj" />
     <ProjectReference Include="..\..\src\Modules\Sync\StockOrder.Modules.Sync.Contracts\StockOrder.Modules.Sync.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Catalog\StockOrder.Modules.Catalog\StockOrder.Modules.Catalog.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Catalog\StockOrder.Modules.Catalog.Contracts\StockOrder.Modules.Catalog.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Hosts\StockOrder.Api\StockOrder.Api.csproj" />
   </ItemGroup>
 

@@ -4,6 +4,7 @@
     <ProjectReference Include="..\..\src\BuildingBlocks\StockOrder.SharedKernel\StockOrder.SharedKernel.csproj" />
     <ProjectReference Include="..\..\src\Modules\Identity\StockOrder.Modules.Identity\StockOrder.Modules.Identity.csproj" />
     <ProjectReference Include="..\..\src\Modules\Sync\StockOrder.Modules.Sync\StockOrder.Modules.Sync.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Catalog\StockOrder.Modules.Catalog\StockOrder.Modules.Catalog.csproj" />
   </ItemGroup>
 
   <ItemGroup>

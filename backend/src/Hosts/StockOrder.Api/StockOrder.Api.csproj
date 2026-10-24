@@ -12,6 +12,7 @@
     <ProjectReference Include="..\..\Modules\Platform\StockOrder.Modules.Platform\StockOrder.Modules.Platform.csproj" />
     <ProjectReference Include="..\..\Modules\Inventory\StockOrder.Modules.Inventory\StockOrder.Modules.Inventory.csproj" />
     <ProjectReference Include="..\..\Modules\Sync\StockOrder.Modules.Sync\StockOrder.Modules.Sync.csproj" />
+    <ProjectReference Include="..\..\Modules\Catalog\StockOrder.Modules.Catalog\StockOrder.Modules.Catalog.csproj" />
   </ItemGroup>
 
   <ItemGroup>

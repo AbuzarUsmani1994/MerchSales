@@ -14,6 +14,7 @@ public static class InventoryModule
             (sp, options) => new InventoryDbContext(options, sp.GetRequiredService<ICurrentUserContext>()));
 
         services.AddScoped<IWarehouseService, WarehouseService>();
+        services.AddScoped<IProductStockSetup, ProductStockSetup>();
 
         return services;
     }

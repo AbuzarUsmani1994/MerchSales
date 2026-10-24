@@ -40,3 +40,20 @@ public sealed class LocationConfiguration : IEntityTypeConfiguration<Location>
         builder.HasIndex(l => l.ClusterKey).IsUnique();
     }
 }
+
+public sealed class BatchConfiguration : IEntityTypeConfiguration<Batch>
+{
+    public void Configure(EntityTypeBuilder<Batch> builder)
+    {
+        builder.ToTable("Batch");
+        builder.HasKey(b => b.Id);
+
+        builder.Property(b => b.ClusterKey).ValueGeneratedOnAdd();
+        builder.Property(b => b.BatchNo).HasMaxLength(64).IsRequired();
+        builder.Property(b => b.Status).HasColumnType("varchar(20)").IsRequired();
+        builder.Property(b => b.RowVer).IsRowVersion();
+
+        builder.HasIndex(b => new { b.TenantId, b.ProductId, b.BatchNo }).IsUnique();
+        builder.HasIndex(b => b.ClusterKey).IsUnique();
+    }
+}

@@ -8,8 +8,8 @@ namespace StockOrder.Modules.Platform.Infrastructure.Provisioning;
 
 /// <summary>
 /// Creates a tenant, its first branch and warehouse (with the three standard locations),
-/// the owner user, the template's roles and permissions, feature flags, settings and
-/// number series — all in one transaction (section 11).
+/// the owner user, the template's roles and permissions, feature flags, settings, number
+/// series and catalog basics — all in one transaction (section 11).
 ///
 /// This is a deliberate, documented exception to "each module owns its own schema"
 /// (section 5.2): provisioning writes directly into tenancy, identity, inventory and
@@ -129,9 +129,30 @@ internal sealed class TenantProvisioningService(
                 ("@prefix", series.Prefix), ("@padding", series.PaddingLength));
         }
 
+        await TemplateCatalogSeeder.SeedAsync(connection, transaction, tenantId, template, now, ct);
+
         await transaction.CommitAsync(ct);
 
         return new ProvisionTenantResult(tenantId, branchId, warehouseId, ownerUserId, oneTimePassword, rolePermissionMap);
+    }
+
+    public async Task<int?> ApplyMissingTemplateDataAsync(Guid tenantId, CancellationToken ct)
+    {
+        await using var connection = await provisioningConnection.OpenAsync(ct);
+        await using var transaction = (SqlTransaction)await connection.BeginTransactionAsync(ct);
+
+        await using var lookup = connection.CreateCommand();
+        lookup.Transaction = transaction;
+        lookup.CommandText = "SELECT Industry FROM tenancy.Tenant WHERE Id = @id AND IsPlatform = 0;";
+        lookup.Parameters.Add(new SqlParameter("@id", tenantId));
+        if (await lookup.ExecuteScalarAsync(ct) is not string industry)
+        {
+            return null;
+        }
+
+        var inserted = await TemplateCatalogSeeder.SeedAsync(connection, transaction, tenantId, IndustryTemplate.Load(industry), clock.UtcNow, ct);
+        await transaction.CommitAsync(ct);
+        return inserted;
     }
 
     private static async Task CreateStandardLocationsAsync(

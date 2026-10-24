@@ -5,12 +5,13 @@ using StockOrder.SharedKernel.Context;
 
 namespace StockOrder.Modules.Inventory.Infrastructure;
 
-/// <summary>Owns the inventory schema (section 5.2). Only warehouses and locations are mapped so far.</summary>
+/// <summary>Owns the inventory schema (section 5.2). Warehouses, locations and batches are mapped so far.</summary>
 public sealed class InventoryDbContext(DbContextOptions<InventoryDbContext> options, ICurrentUserContext currentUser)
     : DbContext(options)
 {
     public DbSet<Warehouse> Warehouses => Set<Warehouse>();
     public DbSet<Location> Locations => Set<Location>();
+    public DbSet<Batch> Batches => Set<Batch>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

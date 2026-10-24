@@ -1,6 +1,7 @@
 using Mediator;
 using Microsoft.Data.SqlClient;
 using StockOrder.Infrastructure.Database;
+using StockOrder.Modules.Platform.Infrastructure.Provisioning;
 using StockOrder.SharedKernel.Errors;
 using StockOrder.SharedKernel.Results;
 using StockOrder.SharedKernel.Time;
@@ -65,5 +66,22 @@ public sealed class SetTenantStatusCommandHandler(ITenantProvisioningConnection 
 
         var rows = await sqlCommand.ExecuteNonQueryAsync(ct);
         return rows == 0 ? Result.Failure(Error.NotFound("Tenant")) : Result.Success();
+    }
+}
+
+public sealed record ApplyTemplateDataResult(int RowsAdded);
+
+/// <param name="TenantId">A tenant created before the template's catalog sections were applied.</param>
+public sealed record ApplyTemplateDataCommand(Guid TenantId) : ICommand<Result<ApplyTemplateDataResult>>;
+
+public sealed class ApplyTemplateDataCommandHandler(ITenantProvisioningService provisioning)
+    : ICommandHandler<ApplyTemplateDataCommand, Result<ApplyTemplateDataResult>>
+{
+    public async ValueTask<Result<ApplyTemplateDataResult>> Handle(ApplyTemplateDataCommand command, CancellationToken ct)
+    {
+        var added = await provisioning.ApplyMissingTemplateDataAsync(command.TenantId, ct);
+        return added is null
+            ? Result.Failure<ApplyTemplateDataResult>(Error.NotFound("Tenant"))
+            : Result.Success(new ApplyTemplateDataResult(added.Value));
     }
 }

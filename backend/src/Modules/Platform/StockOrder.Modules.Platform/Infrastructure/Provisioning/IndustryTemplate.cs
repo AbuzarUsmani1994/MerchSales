@@ -4,10 +4,10 @@ using System.Text.Json.Serialization;
 namespace StockOrder.Modules.Platform.Infrastructure.Provisioning;
 
 /// <summary>
-/// Deserializes an industry template JSON file (section 11). Phase 0 only applies
-/// <see cref="Roles"/>, <see cref="Features"/>, <see cref="Settings"/> and
-/// <see cref="NumberSeries"/> — the catalog/inventory/finance sections are read but not yet
-/// written, since those modules don't exist until Phase 1.
+/// Deserializes an industry template JSON file (section 11). Applied so far: roles, features,
+/// settings, number series, and the catalog basics (units, product types, tax codes, default
+/// price list — see <see cref="TemplateCatalogSeeder"/>). The inventory and finance sections
+/// follow with their modules.
 /// </summary>
 public sealed class IndustryTemplate
 {
@@ -27,6 +27,18 @@ public sealed class IndustryTemplate
 
     [JsonPropertyName("numberSeries")]
     public List<NumberSeriesTemplate> NumberSeries { get; set; } = [];
+
+    [JsonPropertyName("units")]
+    public List<UnitTemplate> Units { get; set; } = [];
+
+    [JsonPropertyName("productTypes")]
+    public List<ProductTypeTemplate> ProductTypes { get; set; } = [];
+
+    [JsonPropertyName("taxCodes")]
+    public List<TaxCodeTemplate> TaxCodes { get; set; } = [];
+
+    [JsonPropertyName("records")]
+    public RecordsTemplate Records { get; set; } = new();
 
     public static IndustryTemplate Load(string industry)
     {
@@ -71,4 +83,59 @@ public sealed class NumberSeriesTemplate
 
     [JsonPropertyName("paddingLength")]
     public byte PaddingLength { get; set; } = 6;
+}
+
+public sealed class UnitTemplate
+{
+    [JsonPropertyName("code")]
+    public string Code { get; set; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
+
+    [JsonPropertyName("decimalPlaces")]
+    public byte DecimalPlaces { get; set; }
+}
+
+/// <summary>
+/// The template's <c>trackingMode</c> is catalog.ProductType.Behaviour (Stocked, Recipe...) and
+/// its <c>batchMode</c> is DefaultTracking (None, Batch, BatchExpiry).
+/// </summary>
+public sealed class ProductTypeTemplate
+{
+    [JsonPropertyName("code")]
+    public string Code { get; set; } = string.Empty;
+
+    [JsonPropertyName("trackingMode")]
+    public string Behaviour { get; set; } = "Stocked";
+
+    [JsonPropertyName("batchMode")]
+    public string DefaultTracking { get; set; } = "None";
+
+    [JsonPropertyName("issueRule")]
+    public string IssueRule { get; set; } = "FIFO";
+}
+
+public sealed class TaxCodeTemplate
+{
+    [JsonPropertyName("code")]
+    public string Code { get; set; } = string.Empty;
+
+    [JsonPropertyName("ratePercent")]
+    public decimal RatePercent { get; set; }
+}
+
+public sealed class RecordsTemplate
+{
+    [JsonPropertyName("defaultPriceList")]
+    public NamedRecordTemplate? DefaultPriceList { get; set; }
+}
+
+public sealed class NamedRecordTemplate
+{
+    [JsonPropertyName("code")]
+    public string Code { get; set; } = string.Empty;
+
+    [JsonPropertyName("name")]
+    public string Name { get; set; } = string.Empty;
 }

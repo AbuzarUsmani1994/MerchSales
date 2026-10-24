@@ -38,4 +38,12 @@ public sealed class TenantsController(IMediator mediator) : ControllerBase
         var result = await mediator.Send(new SetTenantStatusCommand(tenantId, "Active"), ct);
         return result.ToActionResult();
     }
+
+    /// <summary>Adds the industry template's catalog basics a tenant is missing (tenants created before they were applied).</summary>
+    [HttpPost("{tenantId:guid}/apply-template")]
+    public async Task<IActionResult> ApplyTemplate(Guid tenantId, CancellationToken ct)
+    {
+        var result = await mediator.Send(new ApplyTemplateDataCommand(tenantId), ct);
+        return result.ToActionResult();
+    }
 }
