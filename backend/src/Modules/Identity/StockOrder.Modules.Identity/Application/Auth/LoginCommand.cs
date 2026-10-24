@@ -58,6 +58,7 @@ public sealed class LoginCommandHandler(
     IIdGenerator idGenerator)
     : ICommandHandler<LoginCommand, Result<LoginResult>>
 {
+    private const string MobileUsePermission = "Mobile.Use";
     private static readonly PasswordHasher<User> PasswordHasher = new();
 
     public async ValueTask<Result<LoginResult>> Handle(LoginCommand command, CancellationToken ct)
@@ -111,6 +112,13 @@ public sealed class LoginCommandHandler(
             await SaveLoginOutcomeAsync(connection, transaction, user, ct);
             await transaction.CommitAsync(ct);
             return Result.Failure<LoginResult>(Error.Conflict(ErrorCodes.InvalidCredentials, "Invalid TOTP code."));
+        }
+
+        // Section 10: "Requires Mobile.Use for mobile logins" — a login that registers a device is one.
+        if (command.Device is not null && !await HasPermissionAsync(connection, transaction, tenant.TenantId, user.Id, MobileUsePermission, ct))
+        {
+            await transaction.CommitAsync(ct);
+            return Result.Failure<LoginResult>(Error.PermissionDenied("This account isn't allowed to use the mobile app."));
         }
 
         user.RecordSuccessfulLogin(now);
@@ -188,6 +196,25 @@ public sealed class LoginCommandHandler(
         command.Parameters.Add(new SqlParameter("@id", user.Id));
 
         await command.ExecuteNonQueryAsync(ct);
+    }
+
+    private static async Task<bool> HasPermissionAsync(
+        SqlConnection connection, SqlTransaction transaction, Guid tenantId, Guid userId, string permissionCode, CancellationToken ct)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            SELECT CASE WHEN EXISTS (
+                SELECT 1
+                FROM [identity].UserRole ur
+                JOIN [identity].RolePermission rp ON rp.TenantId = ur.TenantId AND rp.RoleId = ur.RoleId
+                WHERE ur.TenantId = @tenantId AND ur.UserId = @userId AND rp.PermissionCode = @code)
+            THEN 1 ELSE 0 END;
+            """;
+        command.Parameters.Add(new SqlParameter("@tenantId", tenantId));
+        command.Parameters.Add(new SqlParameter("@userId", userId));
+        command.Parameters.Add(new SqlParameter("@code", permissionCode));
+        return (int)(await command.ExecuteScalarAsync(ct) ?? 0) == 1;
     }
 
     private static async Task<Guid> UpsertDeviceAsync(

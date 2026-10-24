@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using StockOrder.Infrastructure.Database;
+using StockOrder.Modules.Sync.Contracts;
 using StockOrder.Modules.Tenancy.Contracts;
 using StockOrder.Modules.Tenancy.Infrastructure;
 using StockOrder.SharedKernel.Context;
@@ -15,6 +16,9 @@ public static class TenancyModule
 
         services.AddScoped<IBranchQueries, BranchQueriesAdapter>();
         services.AddScoped<IFeatureQueries, FeatureQueriesAdapter>();
+        services.AddScoped<ISettingQueries, SettingQueriesAdapter>();
+        services.AddScoped<ISyncSource, SettingsSyncSource>();
+        services.AddScoped<ISyncSource, FeaturesSyncSource>();
 
         return services;
     }

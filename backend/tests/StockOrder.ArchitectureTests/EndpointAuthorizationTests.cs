@@ -18,6 +18,7 @@ public sealed class EndpointAuthorizationTests
         typeof(StockOrder.Modules.Identity.IdentityModule).Assembly,
         typeof(StockOrder.Modules.Platform.PlatformModule).Assembly,
         typeof(StockOrder.Modules.Inventory.InventoryModule).Assembly,
+        typeof(StockOrder.Modules.Sync.SyncModule).Assembly,
     ];
 
     [Fact]

@@ -4,6 +4,8 @@ using StockOrder.Infrastructure.Database;
 using StockOrder.Modules.Identity.Infrastructure;
 using StockOrder.Modules.Identity.Infrastructure.Auth;
 using StockOrder.Modules.Identity.Infrastructure.Authorization;
+using StockOrder.Modules.Identity.Infrastructure.Sync;
+using StockOrder.Modules.Sync.Contracts;
 using StockOrder.SharedKernel.Context;
 
 namespace StockOrder.Modules.Identity;
@@ -19,6 +21,8 @@ public static class IdentityModule
         services.AddScoped<Func<IdentityDbContext>>(sp => sp.GetRequiredService<IdentityDbContext>);
         services.AddScoped<IPermissionLoader, PermissionLoader>();
         services.AddScoped<IAccessScope, UserAccessScope>();
+        services.AddScoped<ISyncSource, PermissionsSyncSource>();
+        services.AddScoped<ISyncCommandHandler, UpdatePushTokenCommandHandler>();
         services.AddSingleton<IMfaSecretProtector, MfaSecretProtector>();
 
         services.AddSingleton<IAuthorizationPolicyProvider, PermissionPolicyProvider>();

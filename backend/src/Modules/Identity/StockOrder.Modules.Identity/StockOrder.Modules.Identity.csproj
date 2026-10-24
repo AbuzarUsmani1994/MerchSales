@@ -5,6 +5,7 @@
     <ProjectReference Include="..\..\..\BuildingBlocks\StockOrder.Infrastructure\StockOrder.Infrastructure.csproj" />
     <ProjectReference Include="..\StockOrder.Modules.Identity.Contracts\StockOrder.Modules.Identity.Contracts.csproj" />
     <ProjectReference Include="..\..\Tenancy\StockOrder.Modules.Tenancy.Contracts\StockOrder.Modules.Tenancy.Contracts.csproj" />
+    <ProjectReference Include="..\..\Sync\StockOrder.Modules.Sync.Contracts\StockOrder.Modules.Sync.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -13,6 +14,7 @@
     <PackageReference Include="FluentValidation" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
     <PackageReference Include="Otp.NET" />
+    <PackageReference Include="Dapper" />
   </ItemGroup>
 
   <ItemGroup>

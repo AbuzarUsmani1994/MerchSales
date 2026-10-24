@@ -10,7 +10,7 @@ namespace StockOrder.ArchitectureTests;
 /// </summary>
 public sealed class ModuleBoundaryTests
 {
-    private static readonly string[] ModuleNames = ["Tenancy", "Identity", "Platform", "Inventory"];
+    private static readonly string[] ModuleNames = ["Tenancy", "Identity", "Platform", "Inventory", "Sync"];
 
     private static readonly Dictionary<string, Assembly> ImplementationAssemblies = new()
     {
@@ -18,6 +18,7 @@ public sealed class ModuleBoundaryTests
         ["Identity"] = typeof(StockOrder.Modules.Identity.IdentityModule).Assembly,
         ["Platform"] = typeof(StockOrder.Modules.Platform.PlatformModule).Assembly,
         ["Inventory"] = typeof(StockOrder.Modules.Inventory.InventoryModule).Assembly,
+        ["Sync"] = typeof(StockOrder.Modules.Sync.SyncModule).Assembly,
     };
 
     [Theory]
