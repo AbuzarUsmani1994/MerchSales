@@ -3,7 +3,6 @@ import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
-import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -16,57 +15,46 @@ import { ProblemDetails } from '../../core/auth/auth.models';
   imports: [
     ReactiveFormsModule,
     MatButtonModule,
-    MatCardModule,
     MatFormFieldModule,
     MatInputModule,
     MatProgressSpinnerModule,
   ],
-  template: `
-    <div class="login-shell">
-      <mat-card class="login-card">
-        <mat-card-header>
-          <mat-card-title>StockOrder — Sign in</mat-card-title>
-        </mat-card-header>
-        <mat-card-content>
-          <form [formGroup]="form" (ngSubmit)="submit()">
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Tenant code</mat-label>
-              <input matInput formControlName="tenantCode" autocomplete="organization" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Username</mat-label>
-              <input matInput formControlName="username" autocomplete="username" />
-            </mat-form-field>
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Password</mat-label>
-              <input matInput type="password" formControlName="password" autocomplete="current-password" />
-            </mat-form-field>
-            @if (mfaRequired()) {
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Authenticator code</mat-label>
-                <input matInput formControlName="totpCode" autocomplete="one-time-code" />
-              </mat-form-field>
-            }
-            @if (errorMessage()) {
-              <p class="error">{{ errorMessage() }}</p>
-            }
-            <button mat-flat-button color="primary" type="submit" class="full-width" [disabled]="form.invalid || submitting()">
-              @if (submitting()) {
-                <mat-spinner diameter="20" />
-              } @else {
-                Sign in
-              }
-            </button>
-          </form>
-        </mat-card-content>
-      </mat-card>
-    </div>
-  `,
+  templateUrl: './login.component.html',
   styles: `
-    .login-shell { display: flex; justify-content: center; align-items: center; height: 100vh; background: #f4f6f8; }
-    .login-card { width: 360px; }
-    .full-width { width: 100%; margin-bottom: 0.5rem; }
-    .error { color: #c0392b; font-size: 0.9rem; }
+    .login-shell { display: flex; min-height: 100vh; background: #f4f6f8; }
+
+    .login-form-panel { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; }
+    .login-form-wrap { width: 100%; max-width: 380px; }
+
+    .brand { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 2.5rem; }
+    .brand-mark {
+      width: 36px; height: 36px; border-radius: 10px; background: #1a1f36; color: #fff;
+      display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    .brand-name { font-weight: 700; font-size: 1.15rem; letter-spacing: -0.02em; color: #1a1f36; }
+
+    .title { font-size: 1.9rem; font-weight: 700; margin: 0 0 0.4rem; color: #1a1f36; }
+    .subtitle { color: #6b7280; margin: 0 0 2rem; font-size: 0.95rem; }
+
+    .full-width { width: 100%; margin-bottom: 0.75rem; }
+    .submit-btn { height: 48px; font-weight: 600; margin-top: 0.5rem; }
+    .error { color: #c0392b; font-size: 0.9rem; margin: 0 0 0.75rem; }
+
+    .login-brand-panel {
+      flex: 1;
+      background: linear-gradient(160deg, #1a1f36 0%, #0d1021 100%);
+      display: flex; align-items: center; justify-content: center;
+      padding: 3rem;
+    }
+    .brand-panel-content { max-width: 420px; color: #fff; }
+    .brand-mark-light { background: rgba(255, 255, 255, 0.12); margin-bottom: 1.5rem; }
+    .login-brand-panel h2 { font-size: 2.2rem; font-weight: 700; margin: 0 0 1rem; letter-spacing: -0.02em; }
+    .login-brand-panel p { color: rgba(255, 255, 255, 0.72); line-height: 1.6; font-size: 1rem; margin: 0; }
+
+    @media (max-width: 900px) {
+      .login-brand-panel { display: none; }
+    }
   `,
 })
 export class LoginComponent {

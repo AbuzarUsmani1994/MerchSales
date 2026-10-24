@@ -1,0 +1,61 @@
+<div class="login-shell">
+  <div class="login-form-panel">
+    <div class="login-form-wrap">
+      <div class="brand">
+        <span class="brand-mark">S</span>
+        <span class="brand-name">StockOrder</span>
+      </div>
+
+      <h1 class="title">Sign in</h1>
+      <p class="subtitle">Welcome back — enter your details to continue.</p>
+
+      <form [formGroup]="form" (ngSubmit)="submit()">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Tenant code</mat-label>
+          <input matInput formControlName="tenantCode" autocomplete="organization" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Username</mat-label>
+          <input matInput formControlName="username" autocomplete="username" />
+        </mat-form-field>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Password</mat-label>
+          <input matInput type="password" formControlName="password" autocomplete="current-password" />
+        </mat-form-field>
+        @if (mfaRequired()) {
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Authenticator code</mat-label>
+            <input matInput formControlName="totpCode" autocomplete="one-time-code" />
+          </mat-form-field>
+        }
+        @if (errorMessage()) {
+          <p class="error">{{ errorMessage() }}</p>
+        }
+        <button
+          mat-flat-button
+          color="primary"
+          type="submit"
+          class="full-width submit-btn"
+          [disabled]="form.invalid || submitting()"
+        >
+          @if (submitting()) {
+            <mat-spinner diameter="20" />
+          } @else {
+            Sign in
+          }
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="login-brand-panel">
+    <div class="brand-panel-content">
+      <span class="brand-mark brand-mark-light">S</span>
+      <h2>StockOrder</h2>
+      <p>
+        One platform for catalog, inventory, purchasing and sales — built for restaurants
+        and pharma distributors to run daily operations from a phone or the back office.
+      </p>
+    </div>
+  </div>
+</div>
