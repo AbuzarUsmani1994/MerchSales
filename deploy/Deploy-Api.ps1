@@ -18,8 +18,13 @@ param(
     [string]$SiteName = "StockOrderApi",
     [string]$AppPoolName = "StockOrderApi",
     [string]$PhysicalPath = "C:\inetpub\StockOrderApi",
-    [int]$Port = 5000,
-    [string]$HealthCheckUrl = "http://localhost:5000/health/ready"
+    # 5000 and 8080 turned out to be silently blocked by the firewall in front of
+    # 116.58.33.11 (ERR_CONNECTION_TIMED_OUT externally, worked fine from inside the RDP
+    # session, which is what made this so confusing to diagnose) -- 5002/5001 confirmed
+    # reachable (ERR_CONNECTION_REFUSED -- i.e. actually reached the server -- before
+    # anything was bound there). Change these if your own network blocks different ports.
+    [int]$Port = 5002,
+    [string]$HealthCheckUrl = "http://localhost:5002/health/ready"
 )
 
 $ErrorActionPreference = "Stop"

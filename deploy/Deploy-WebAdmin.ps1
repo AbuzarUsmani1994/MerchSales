@@ -12,7 +12,9 @@ param(
     [string]$SiteName = "StockOrderAdmin",
     [string]$AppPoolName = "StockOrderAdmin",
     [string]$PhysicalPath = "C:\inetpub\StockOrderAdmin",
-    [int]$Port = 8080
+    # 8080 turned out to be silently blocked by the firewall in front of 116.58.33.11
+    # (see the matching note in Deploy-Api.ps1) -- 5001 confirmed reachable.
+    [int]$Port = 5001
 )
 
 $ErrorActionPreference = "Stop"
