@@ -1,4 +1,5 @@
 import { HttpInterceptorFn } from '@angular/common/http';
+import { randomUuid } from './uuid';
 
 /** Every creating/posting POST needs a client-generated Idempotency-Key (section 9). */
 export const idempotencyInterceptor: HttpInterceptorFn = (req, next) => {
@@ -6,5 +7,5 @@ export const idempotencyInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
 
-  return next(req.clone({ setHeaders: { 'Idempotency-Key': crypto.randomUUID() } }));
+  return next(req.clone({ setHeaders: { 'Idempotency-Key': randomUuid() } }));
 };
