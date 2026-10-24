@@ -18,6 +18,11 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          # The secret scan below covers every commit in the push, starting from the parent
+          # of the first one. A shallow (depth 1) checkout lacks that history, so any push of
+          # more than one commit failed the scan — and skipped the deploy job.
+          fetch-depth: 0
 
       - uses: actions/setup-dotnet@v4
         with:
