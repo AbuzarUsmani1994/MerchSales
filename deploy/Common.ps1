@@ -48,14 +48,28 @@ function Ensure-Site {
         New-Item -ItemType Directory -Path $PhysicalPath -Force | Out-Null
     }
 
+    $binding = if ($HostHeader) { "*:$($Port):$HostHeader" } else { "*:$($Port):" }
+
     if (-not (Test-Path "IIS:\Sites\$Name")) {
         Write-Host "Creating site '$Name' on port $Port..."
-        $binding = if ($HostHeader) { "*:$($Port):$HostHeader" } else { "*:$($Port):" }
         New-Website -Name $Name -PhysicalPath $PhysicalPath -ApplicationPool $AppPoolName `
             -Port $Port -HostHeader $HostHeader -Force | Out-Null
     } else {
         Set-ItemProperty "IIS:\Sites\$Name" -Name applicationPool -Value $AppPoolName
         Set-ItemProperty "IIS:\Sites\$Name" -Name physicalPath -Value $PhysicalPath
+        # BUG (found live on 116.58.33.11): this used to stop here, never touching the
+        # port binding on redeploys of an already-existing site. Changing $Port (e.g. the
+        # 5000 -> 5002 move after discovering 5000 was silently blocked externally) then
+        # silently did nothing -- the site stayed bound to the old port while the health
+        # check polled the new one, timing out with no indication why. Always reconcile
+        # the binding too, not just on first creation.
+        $currentBindings = Get-ItemProperty "IIS:\Sites\$Name" -Name bindings
+        $alreadyBound = $currentBindings.Value | Where-Object { $_.bindingInformation -eq $binding }
+        if (-not $alreadyBound) {
+            Write-Host "Updating site '$Name' binding to port $Port..."
+            Clear-ItemProperty "IIS:\Sites\$Name" -Name bindings
+            New-ItemProperty "IIS:\Sites\$Name" -Name bindings -Value @{protocol = "http"; bindingInformation = $binding } | Out-Null
+        }
     }
 }
 
