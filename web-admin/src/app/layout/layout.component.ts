@@ -38,7 +38,7 @@ const NAV_SECTIONS: NavSection[] = [
     title: 'Configuration',
     entries: [
       { label: 'Feature toggles', icon: 'toggle_on', routerLink: '/setup/features', permission: 'Settings.Manage', tenantWide: true },
-      { label: 'Devices', icon: 'smartphone', routerLink: '/setup/devices', permission: 'Devices.Manage', tenantWide: true },
+      { label: 'Devices', icon: 'smartphone', routerLink: '/setup/devices', permission: 'Devices.Manage' },
     ],
   },
   {

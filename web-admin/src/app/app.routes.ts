@@ -40,7 +40,7 @@ export const routes: Routes = [
       {
         path: 'setup/devices',
         loadComponent: () => import('./features/setup/devices.component').then((m) => m.DevicesComponent),
-        canActivate: [permissionGuard('Devices.Manage', { tenantWide: true })],
+        canActivate: [permissionGuard('Devices.Manage')],
       },
       {
         path: 'platform/tenants',

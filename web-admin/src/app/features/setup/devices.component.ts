@@ -1,12 +1,13 @@
 import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ConfigService } from '../../core/config.service';
+import { AuthService } from '../../core/auth/auth.service';
 
 interface DeviceSummary {
   id: string;
@@ -16,6 +17,9 @@ interface DeviceSummary {
   lastSeenAtUtc: string | null;
   isRevoked: boolean;
   wipeRequested: boolean;
+  userId: string;
+  userDisplayName: string;
+  username: string;
 }
 
 @Component({
@@ -27,7 +31,12 @@ interface DeviceSummary {
       <div class="page-header">
         <div>
           <h1 class="page-title">Devices</h1>
-          <p class="page-subtitle">Phones and tablets signed in to the mobile app. Revoke a lost device; wipe erases its local data.</p>
+          <p class="page-subtitle">
+            Phones and tablets signed in to the mobile app. Revoke a lost device; wipe erases its local data.
+            @if (!seesAllDevices()) {
+              Showing your branch staff's devices.
+            }
+          </p>
         </div>
       </div>
       <div class="table-card">
@@ -45,6 +54,13 @@ interface DeviceSummary {
                   <span class="cell-secondary">{{ device.platform }}</span>
                 </div>
               </div>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="user">
+            <th mat-header-cell *matHeaderCellDef>Used by</th>
+            <td mat-cell *matCellDef="let device">
+              <span class="cell-primary">{{ device.userDisplayName }}</span>
+              <span class="cell-secondary">{{ device.username }}</span>
             </td>
           </ng-container>
           <ng-container matColumnDef="appVersion">
@@ -103,10 +119,12 @@ interface DeviceSummary {
 export class DevicesComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly config = inject(ConfigService);
+  private readonly auth = inject(AuthService);
 
   readonly devices = signal<DeviceSummary[]>([]);
   readonly loading = signal(true);
-  readonly columns = ['device', 'appVersion', 'lastSeen', 'status', 'actions'];
+  readonly columns = ['device', 'user', 'appVersion', 'lastSeen', 'status', 'actions'];
+  readonly seesAllDevices = computed(() => this.auth.hasTenantWidePermission('Devices.Manage'));
 
   async ngOnInit(): Promise<void> {
     await this.load();

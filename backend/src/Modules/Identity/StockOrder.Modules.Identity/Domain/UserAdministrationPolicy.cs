@@ -26,6 +26,7 @@ public static class UserAdministrationPolicy
 {
     public const string UsersManage = "Users.Manage";
     public const string RolesManage = "Roles.Manage";
+    public const string DevicesManage = "Devices.Manage";
 
     private static readonly string[] AdminPermissionCodes = [UsersManage, RolesManage];
 
@@ -76,6 +77,32 @@ public static class UserAdministrationPolicy
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Devices (phones/tablets) belong to whoever last signed in on them. An all-branches
+    /// <c>Devices.Manage</c> role reaches every device; a branch-scoped one only devices whose
+    /// user is staff at the admin's branches: every role at a covered branch, none of them for
+    /// all branches, none an admin role. So a branch manager can revoke a cashier's lost phone,
+    /// but not the phone of another manager or the Owner.
+    /// </summary>
+    public static Error? CanManageDevice(
+        IReadOnlyCollection<PermissionGrant> adminGrants, IReadOnlyCollection<HeldRole> deviceUserRoles, Guid? deviceUserDefaultBranchId)
+    {
+        var scope = BranchScope.For(adminGrants, DevicesManage);
+        if (scope.AllBranches)
+        {
+            return null;
+        }
+
+        var isBranchStaff = deviceUserRoles.Count == 0
+            ? scope.Covers(deviceUserDefaultBranchId)
+            : deviceUserRoles.All(r => r.BranchId is not null && scope.Covers(r.BranchId) &&
+                                       !r.PermissionCodes.Any(AdminPermissionCodes.Contains));
+
+        return isBranchStaff
+            ? null
+            : Error.PermissionDenied("You can only manage devices of staff at your own branches.");
     }
 
     /// <summary>

@@ -6,9 +6,11 @@ using StockOrder.Modules.Identity.Application.Devices;
 
 namespace StockOrder.Modules.Identity.Api;
 
+/// <summary>Branch managers manage their own branch staff's devices; the handlers check which.</summary>
 [ApiController]
 [Route("api/v1/identity/devices")]
 [Authorize(Policy = "Devices.Manage")]
+[BranchScoped]
 public sealed class DevicesController(IMediator mediator) : ControllerBase
 {
     [HttpGet]

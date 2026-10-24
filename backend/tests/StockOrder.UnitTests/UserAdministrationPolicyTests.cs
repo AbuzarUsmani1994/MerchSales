@@ -132,6 +132,30 @@ public sealed class UserAdministrationPolicyTests
     }
 
     [Fact]
+    public void Branch_manager_can_manage_devices_of_own_branch_staff_only()
+    {
+        var lakeCityManager = GrantsFor([.. ManagerPermissions, "Devices.Manage"], LakeCity);
+
+        UserAdministrationPolicy.CanManageDevice(lakeCityManager, [new HeldRole(LakeCity, CashierPermissions)], LakeCity).ShouldBeNull();
+        UserAdministrationPolicy.CanManageDevice(lakeCityManager, [], LakeCity).ShouldBeNull();
+
+        ShouldBeDenied(UserAdministrationPolicy.CanManageDevice(lakeCityManager, [new HeldRole(Eden, CashierPermissions)], Eden));
+        ShouldBeDenied(UserAdministrationPolicy.CanManageDevice(lakeCityManager, [new HeldRole(LakeCity, ManagerPermissions)], LakeCity));
+        ShouldBeDenied(UserAdministrationPolicy.CanManageDevice(lakeCityManager, [new HeldRole(null, OwnerPermissions)], LakeCity));
+        ShouldBeDenied(UserAdministrationPolicy.CanManageDevice(
+            lakeCityManager, [new HeldRole(LakeCity, CashierPermissions), new HeldRole(Eden, CashierPermissions)], LakeCity));
+    }
+
+    [Fact]
+    public void All_branch_devices_admin_can_manage_every_device()
+    {
+        var owner = GrantsFor([.. OwnerPermissions, "Devices.Manage"], null);
+
+        UserAdministrationPolicy.CanManageDevice(owner, [new HeldRole(LakeCity, ManagerPermissions)], LakeCity).ShouldBeNull();
+        UserAdministrationPolicy.CanManageDevice(owner, [new HeldRole(null, OwnerPermissions)], null).ShouldBeNull();
+    }
+
+    [Fact]
     public void Branch_scope_covers_only_its_branches_and_null_means_all()
     {
         var scope = BranchScope.For(LakeCityManager, "Users.Manage");
