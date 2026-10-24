@@ -97,32 +97,34 @@ be served from — change it once you have a real domain/Cloudflare address in f
 
 ## 6. Install the self-hosted GitHub Actions runner
 
-1. On GitHub: open the repo → **Settings** → **Actions** → **Runners** → **New self-hosted runner** → Windows → x64.
-2. GitHub shows you a registration token and a short PowerShell script. Run it on the server, in a new folder, e.g. `C:\actions-runner`. It looks like:
+Use `deploy/Install-Runner.ps1` (download just that one file, no `git clone` needed):
 
 ```powershell
 mkdir C:\actions-runner; cd C:\actions-runner
-Invoke-WebRequest -Uri <the URL GitHub gives you> -OutFile actions-runner.zip
-Expand-Archive -Path actions-runner.zip -DestinationPath .
-./config.cmd --url https://github.com/AbuzarUsmani1994/MerchSales --token <the token GitHub gives you>
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/AbuzarUsmani1994/MerchSales/main/deploy/Install-Runner.ps1" -OutFile "Install-Runner.ps1"
+.\Install-Runner.ps1 -Token "<fresh token from GitHub, see below>" -InstallPath "C:\actions-runner"
 ```
 
-3. When `config.cmd` asks for labels, add `stockorder-prod` (matches the `runs-on:` in the
-   workflows) in addition to the defaults it suggests.
-4. Install it as a Windows service so it survives reboots and runs even when nobody's
-   logged in:
+1. Get the token from: repo → **Settings** → **Actions** → **Runners** → **New self-hosted
+   runner** → Windows → x64 → copy the short value after `--token` in the "Configure" box.
+   It expires fast (~1 hour) — grab it right before running the script.
+2. The script downloads the runner, registers it against this repo with labels
+   `self-hosted,windows,stockorder-prod` (matches the workflows' `runs-on:`), and installs
+   it as a Windows Service **in one step** via `config.cmd --runasservice` — current runner
+   releases (2.3xx) no longer ship a standalone `svc.cmd`, so don't follow older
+   instructions that reference it separately.
+3. Confirm it shows **Idle** (green) on the GitHub repo's Runners page
+   (`…/settings/actions/runners?tab=self-hosted`).
 
-```powershell
-./svc.cmd install
-./svc.cmd start
-```
+**If this server already runs a different self-hosted runner for another project** (check
+first with `Get-Service -Name "actions.runner.*"`), install this one into a different
+folder (e.g. `C:\actions-runner-stockorder`) — each runner needs its own folder, and the
+Windows Service name is derived automatically from the repo + runner name, so they won't
+collide as long as the folders are separate.
 
-5. Confirm it shows **Idle** (green) on the GitHub repo's Runners page.
-
-The runner process runs under whatever account you choose during `svc.cmd install`
-(defaults to the account you're logged in as, or pick a dedicated service account) — give
-that account rights to manage IIS (`IIS_IUSRS` / local Administrators) and to
-start/stop/create the `StockOrderWorker` service, since the deploy scripts do both.
+The runner service runs as `NT AUTHORITY\NETWORK SERVICE` by default — give that account
+rights to manage IIS (`IIS_IUSRS` / local Administrators) and to start/stop/create the
+`StockOrderWorker` service, since the deploy scripts do both.
 
 ## 7. First deploy
 

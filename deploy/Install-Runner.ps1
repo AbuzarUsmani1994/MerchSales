@@ -33,20 +33,20 @@ if (-not (Test-Path $zipName)) {
     Invoke-WebRequest -Uri "https://github.com/actions/runner/releases/download/v$RunnerVersion/$zipName" -OutFile $zipName
 }
 
-if (-not (Test-Path ".\config.cmd")) {
+if (-not (Test-Path ".\config.cmd") -or -not (Test-Path ".\bin\Runner.Listener.exe")) {
     Write-Host "Extracting..."
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     [System.IO.Compression.ZipFile]::ExtractToDirectory("$InstallPath\$zipName", $InstallPath)
 }
 
-Write-Host "Configuring runner (unattended, labels: $Labels)..."
+Write-Host "Configuring runner and installing it as a Windows Service (unattended, labels: $Labels)..."
 # --unattended skips the interactive prompts; --replace lets you re-run this safely if a
 # runner with this name was already registered (e.g. after a token expired mid-setup).
-.\config.cmd --url $RepoUrl --token $Token --name $RunnerName --labels $Labels --unattended --replace
-
-Write-Host "Installing as a Windows Service so it survives reboots and runs without an RDP session open..."
-.\svc.cmd install
-.\svc.cmd start
+# --runasservice configures AND installs+starts the Windows Service in one step. Current
+# runner releases (2.3xx) don't ship a standalone svc.cmd any more -- the install logic
+# moved into config.cmd itself. If you see ".\svc.cmd not recognized", that's why; this
+# flag is the fix (discovered the hard way deploying to 116.58.33.11 on 2026-10-24).
+.\config.cmd --url $RepoUrl --token $Token --name $RunnerName --labels $Labels --unattended --replace --runasservice
 
 Write-Host ""
 Write-Host "=== Done. Check https://github.com/AbuzarUsmani1994/MerchSales/settings/actions/runners -- '$RunnerName' should show Idle (green). ==="
