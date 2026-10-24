@@ -6,6 +6,13 @@ import { BranchSummary, LoginRequest, LoginResponse, MeResponse, RefreshResponse
 
 const ACCESS_TOKEN_KEY = 'stockorder.accessToken';
 const REFRESH_TOKEN_KEY = 'stockorder.refreshToken';
+const TENANT_KEY = 'stockorder.tenant';
+
+/** Display-only tenant info kept from the login response (not used for any security decision). */
+export interface TenantInfo {
+  code: string;
+  name: string;
+}
 
 /**
  * Login (section 10), silent refresh, and the signals the permission/feature-driven menu
@@ -19,6 +26,7 @@ export class AuthService {
 
   private readonly accessTokenSignal = signal<string | null>(sessionStorage.getItem(ACCESS_TOKEN_KEY));
   private readonly meSignal = signal<MeResponse | null>(null);
+  private readonly tenantSignal = signal<TenantInfo | null>(readTenant());
   private refreshInFlight: Promise<string | null> | null = null;
 
   readonly isAuthenticated = computed(() => this.accessTokenSignal() !== null);
@@ -27,6 +35,7 @@ export class AuthService {
   readonly tenantWidePermissions = computed<string[]>(() => this.meSignal()?.tenantWidePermissions ?? []);
   readonly features = computed<string[]>(() => this.meSignal()?.features ?? []);
   readonly branches = computed<BranchSummary[]>(() => this.meSignal()?.branches ?? []);
+  readonly tenant = this.tenantSignal.asReadonly();
 
   get accessToken(): string | null {
     return this.accessTokenSignal();
@@ -50,6 +59,9 @@ export class AuthService {
       this.http.post<LoginResponse>(`${this.config.apiBaseUrl}/api/v1/auth/login`, request),
     );
     this.storeTokens(response.accessToken, response.refreshToken);
+    const tenant: TenantInfo = { code: response.tenantCode, name: response.tenantName };
+    sessionStorage.setItem(TENANT_KEY, JSON.stringify(tenant));
+    this.tenantSignal.set(tenant);
     await this.loadMe();
     return response;
   }
@@ -100,11 +112,20 @@ export class AuthService {
 
   async logout(): Promise<void> {
     const refreshToken = sessionStorage.getItem(REFRESH_TOKEN_KEY);
+    const accessToken = this.accessToken;
     this.clearTokens();
     this.meSignal.set(null);
-    if (refreshToken) {
+    if (refreshToken && accessToken) {
       try {
-        await firstValueFrom(this.http.post(`${this.config.apiBaseUrl}/api/v1/auth/logout`, { refreshToken }));
+        // The endpoint needs the caller's bearer token, but the auth interceptor no longer has
+        // it (cleared above, so an expired token can't trigger a refresh loop) — send it here.
+        await firstValueFrom(
+          this.http.post(
+            `${this.config.apiBaseUrl}/api/v1/auth/logout`,
+            { refreshToken },
+            { headers: { Authorization: `Bearer ${accessToken}` } },
+          ),
+        );
       } catch {
         // Already logged out locally; a failed server-side revoke isn't fatal here.
       }
@@ -120,6 +141,17 @@ export class AuthService {
   private clearTokens(): void {
     sessionStorage.removeItem(ACCESS_TOKEN_KEY);
     sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+    sessionStorage.removeItem(TENANT_KEY);
     this.accessTokenSignal.set(null);
+    this.tenantSignal.set(null);
+  }
+}
+
+function readTenant(): TenantInfo | null {
+  try {
+    const raw = sessionStorage.getItem(TENANT_KEY);
+    return raw ? (JSON.parse(raw) as TenantInfo) : null;
+  } catch {
+    return null;
   }
 }

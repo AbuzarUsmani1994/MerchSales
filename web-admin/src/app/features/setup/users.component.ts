@@ -3,7 +3,6 @@ import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { MatTableModule } from '@angular/material/table';
-import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -97,14 +96,17 @@ abstract class BranchRolePicker {
           <mat-label>Display name</mat-label>
           <input matInput formControlName="displayName" />
         </mat-form-field>
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Email</mat-label>
-          <input matInput formControlName="email" type="email" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Phone</mat-label>
-          <input matInput formControlName="phone" />
-        </mat-form-field>
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Email</mat-label>
+            <input matInput formControlName="email" type="email" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Phone</mat-label>
+            <input matInput formControlName="phone" />
+          </mat-form-field>
+        </div>
+        <p class="form-section-title">Access</p>
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Branch</mat-label>
           <mat-select formControlName="branch" (selectionChange)="branchChanged($event.value)">
@@ -231,94 +233,151 @@ export class AssignRoleDialogComponent extends BranchRolePicker {
 @Component({
   selector: 'app-one-time-password-dialog',
   standalone: true,
-  imports: [MatDialogModule, MatButtonModule],
+  imports: [MatDialogModule, MatButtonModule, MatIconModule],
   template: `
     <h2 mat-dialog-title>One-time password</h2>
     <mat-dialog-content>
       <p>Give this password to <strong>{{ data.username }}</strong>. It is shown only once; they must change it at first sign-in.</p>
-      <p class="otp">{{ data.oneTimePassword }}</p>
+      <div class="otp-box">
+        <span class="otp mono">{{ data.oneTimePassword }}</span>
+        <button mat-icon-button (click)="copy()" [attr.aria-label]="copied() ? 'Copied' : 'Copy password'">
+          <mat-icon>{{ copied() ? 'check' : 'content_copy' }}</mat-icon>
+        </button>
+      </div>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-flat-button color="primary" mat-dialog-close>Done</button>
     </mat-dialog-actions>
   `,
-  styles: `.otp { font-family: monospace; font-size: 1.4rem; letter-spacing: 0.1em; user-select: all; }`,
+  styles: `
+    .otp-box {
+      display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+      padding: 0.6rem 0.6rem 0.6rem 1rem; border-radius: 10px;
+      background: var(--so-accent-soft); border: 1px dashed #a5b4fc;
+    }
+    .otp { font-size: 1.35rem; letter-spacing: 0.12em; color: var(--so-accent-strong); user-select: all; }
+  `,
 })
 export class OneTimePasswordDialogComponent {
   readonly data = inject<{ username: string; oneTimePassword: string }>(MAT_DIALOG_DATA);
+  readonly copied = signal(false);
+
+  async copy(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(this.data.oneTimePassword);
+      this.copied.set(true);
+    } catch {
+      // Clipboard needs a secure context (HTTPS); the text is still selectable by hand.
+    }
+  }
 }
 
 @Component({
   selector: 'app-users',
   standalone: true,
-  imports: [MatTableModule, MatChipsModule, MatProgressBarModule, MatButtonModule, MatIconModule],
+  imports: [MatTableModule, MatProgressBarModule, MatButtonModule, MatIconModule],
   template: `
-    <h2>Users</h2>
-    @if (canManageUsers()) {
-      <button mat-flat-button color="primary" (click)="openNewUserDialog()" class="mb-3">New user</button>
-    }
-    @if (loading()) {
-      <mat-progress-bar mode="indeterminate" />
-    }
-    <table mat-table [dataSource]="users()" class="mat-elevation-z1">
-      <ng-container matColumnDef="username">
-        <th mat-header-cell *matHeaderCellDef>Username</th>
-        <td mat-cell *matCellDef="let user">{{ user.username }}</td>
-      </ng-container>
-      <ng-container matColumnDef="displayName">
-        <th mat-header-cell *matHeaderCellDef>Display name</th>
-        <td mat-cell *matCellDef="let user">{{ user.displayName }}</td>
-      </ng-container>
-      <ng-container matColumnDef="roles">
-        <th mat-header-cell *matHeaderCellDef>Roles</th>
-        <td mat-cell *matCellDef="let user">
-          <mat-chip-set>
-            @for (role of user.roles; track role.userRoleId) {
-              <mat-chip [removable]="user.canManage" (removed)="removeRole(user, role)">
-                {{ role.roleName }} · {{ branchName(role.branchId) }}
-                @if (user.canManage) {
-                  <button matChipRemove [attr.aria-label]="'Remove ' + role.roleName">
-                    <mat-icon>cancel</mat-icon>
-                  </button>
-                }
-              </mat-chip>
-            } @empty {
-              <span class="muted">No roles</span>
-            }
-          </mat-chip-set>
-        </td>
-      </ng-container>
-      <ng-container matColumnDef="status">
-        <th mat-header-cell *matHeaderCellDef>Status</th>
-        <td mat-cell *matCellDef="let user">
-          <mat-chip [color]="user.isActive ? 'primary' : 'warn'" highlighted>
-            {{ user.isActive ? 'Active' : 'Inactive' }}
-          </mat-chip>
-        </td>
-      </ng-container>
-      <ng-container matColumnDef="mfa">
-        <th mat-header-cell *matHeaderCellDef>MFA</th>
-        <td mat-cell *matCellDef="let user">{{ user.mfaEnabled ? 'Enabled' : '—' }}</td>
-      </ng-container>
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef></th>
-        <td mat-cell *matCellDef="let user" class="actions">
-          @if (user.canManage) {
-            <button mat-button (click)="openAssignRoleDialog(user)">Assign role</button>
-            <button mat-button (click)="resetPassword(user)">Reset password</button>
-          }
-        </td>
-      </ng-container>
+    <div class="page">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Users</h1>
+          <p class="page-subtitle">People who can sign in, and the role they hold at each branch.</p>
+        </div>
+        @if (canManageUsers()) {
+          <div class="page-actions">
+            <button mat-flat-button color="primary" (click)="openNewUserDialog()">
+              <mat-icon>person_add</mat-icon>
+              New user
+            </button>
+          </div>
+        }
+      </div>
 
-      <tr mat-header-row *matHeaderRowDef="columns"></tr>
-      <tr mat-row *matRowDef="let row; columns: columns"></tr>
-    </table>
+      <div class="table-card">
+        @if (loading()) {
+          <mat-progress-bar mode="indeterminate" />
+        }
+        <table mat-table [dataSource]="users()">
+          <ng-container matColumnDef="user">
+            <th mat-header-cell *matHeaderCellDef>User</th>
+            <td mat-cell *matCellDef="let user">
+              <div class="user-cell">
+                <span class="avatar">{{ initials(user.displayName) }}</span>
+                <div>
+                  <span class="cell-primary">{{ user.displayName }}</span>
+                  <span class="cell-secondary">{{ user.username }}{{ user.email ? ' · ' + user.email : '' }}</span>
+                </div>
+              </div>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="roles">
+            <th mat-header-cell *matHeaderCellDef>Roles</th>
+            <td mat-cell *matCellDef="let user">
+              @for (role of user.roles; track role.userRoleId) {
+                <span class="tag" [class.tag-static]="!user.canManage">
+                  {{ role.roleName }} <span class="tag-scope">· {{ branchName(role.branchId) }}</span>
+                  @if (user.canManage) {
+                    <button type="button" (click)="removeRole(user, role)" [attr.aria-label]="'Remove ' + role.roleName">
+                      <mat-icon>close</mat-icon>
+                    </button>
+                  }
+                </span>
+              } @empty {
+                <span class="muted">No roles</span>
+              }
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let user">
+              <span class="pill" [class.pill-success]="user.isActive">{{ user.isActive ? 'Active' : 'Inactive' }}</span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="mfa">
+            <th mat-header-cell *matHeaderCellDef>MFA</th>
+            <td mat-cell *matCellDef="let user">
+              @if (user.mfaEnabled) {
+                <span class="pill pill-info">On</span>
+              } @else {
+                <span class="muted">—</span>
+              }
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let user" class="cell-actions">
+              @if (user.canManage) {
+                <button mat-button (click)="openAssignRoleDialog(user)">
+                  <mat-icon>add_moderator</mat-icon>
+                  Assign role
+                </button>
+                <button mat-button (click)="resetPassword(user)">
+                  <mat-icon>key</mat-icon>
+                  Reset password
+                </button>
+              }
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columns"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns"></tr>
+        </table>
+        @if (!loading() && users().length === 0) {
+          <div class="empty-state">
+            <mat-icon>group_off</mat-icon>
+            <div>No users yet.</div>
+          </div>
+        }
+      </div>
+    </div>
   `,
   styles: `
-    table { width: 100%; }
-    .mb-3 { margin-bottom: 1rem; }
-    .muted { color: #757575; }
-    .actions { white-space: nowrap; text-align: right; }
+    .user-cell { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; }
+    .avatar {
+      width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--so-accent-soft); color: var(--so-accent-strong); font-weight: 700; font-size: 0.8rem;
+    }
   `,
 })
 export class UsersComponent implements OnInit {
@@ -329,7 +388,7 @@ export class UsersComponent implements OnInit {
 
   readonly users = signal<UserSummary[]>([]);
   readonly loading = signal(true);
-  readonly columns = ['username', 'displayName', 'roles', 'status', 'mfa', 'actions'];
+  readonly columns = ['user', 'roles', 'status', 'mfa', 'actions'];
   readonly canManageUsers = computed(() => this.auth.hasPermission('Users.Manage'));
 
   private get usersUrl(): string {
@@ -338,6 +397,11 @@ export class UsersComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     await this.load();
+  }
+
+  initials(name: string): string {
+    const parts = name.split(/\s+/).filter(Boolean);
+    return ((parts[0]?.[0] ?? '') + (parts.length > 1 ? parts[parts.length - 1][0] : '')).toUpperCase();
   }
 
   branchName(branchId: string | null): string {

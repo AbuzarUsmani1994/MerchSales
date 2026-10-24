@@ -52,6 +52,7 @@ or its major version changes.
 | ag-grid-angular, ag-grid-community | MIT (Community edition) |
 | rxjs | Apache-2.0 |
 | eslint, @eslint/js, angular-eslint, typescript-eslint | MIT |
+| Inter, JetBrains Mono fonts (Google Fonts, linked from `index.html`, not an npm package) | SIL Open Font License 1.1 |
 
 **Deviation from CLAUDE.md section 2**: PrimeNG was named in the spec, but its licensing
 model changed since the spec was written — even the "Community" tier now requires

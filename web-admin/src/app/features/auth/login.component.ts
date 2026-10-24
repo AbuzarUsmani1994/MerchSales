@@ -21,14 +21,16 @@ import { ProblemDetails } from '../../core/auth/auth.models';
   ],
   templateUrl: './login.component.html',
   styles: `
-    .login-shell { display: flex; min-height: 100vh; background: #f4f6f8; }
+    .login-shell { display: flex; min-height: 100vh; background: var(--so-bg); }
 
     .login-form-panel { flex: 1; display: flex; align-items: center; justify-content: center; padding: 2rem; }
     .login-form-wrap { width: 100%; max-width: 380px; }
 
     .brand { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 2.5rem; }
     .brand-mark {
-      width: 36px; height: 36px; border-radius: 10px; background: #1a1f36; color: #fff;
+      width: 36px; height: 36px; border-radius: 10px; color: #fff;
+      background: linear-gradient(135deg, #6366f1 0%, var(--so-accent) 100%);
+      box-shadow: 0 6px 16px -4px rgba(79, 70, 229, 0.55);
       display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem;
       flex-shrink: 0;
     }
@@ -43,12 +45,15 @@ import { ProblemDetails } from '../../core/auth/auth.models';
 
     .login-brand-panel {
       flex: 1;
-      background: linear-gradient(160deg, #1a1f36 0%, #0d1021 100%);
+      background:
+        radial-gradient(circle at 80% 15%, rgba(99, 102, 241, 0.35) 0%, transparent 45%),
+        radial-gradient(circle at 10% 90%, rgba(34, 211, 238, 0.14) 0%, transparent 40%),
+        linear-gradient(160deg, var(--so-navy-800) 0%, var(--so-navy-900) 100%);
       display: flex; align-items: center; justify-content: center;
       padding: 3rem;
     }
     .brand-panel-content { max-width: 420px; color: #fff; }
-    .brand-mark-light { background: rgba(255, 255, 255, 0.12); margin-bottom: 1.5rem; }
+    .brand-mark-light { width: 48px; height: 48px; border-radius: 14px; font-size: 1.4rem; margin-bottom: 1.5rem; }
     .login-brand-panel h2 { font-size: 2.2rem; font-weight: 700; margin: 0 0 1rem; letter-spacing: -0.02em; }
     .login-brand-panel p { color: rgba(255, 255, 255, 0.72); line-height: 1.6; font-size: 1rem; margin: 0; }
 

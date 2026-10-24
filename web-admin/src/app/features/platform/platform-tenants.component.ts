@@ -1,3 +1,4 @@
+import { DatePipe } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -7,7 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
-import { MatChipsModule } from '@angular/material/chips';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { ConfigService } from '../../core/config.service';
@@ -48,14 +49,17 @@ interface ProvisionTenantFormValue {
     <h2 mat-dialog-title>Provision tenant</h2>
     <mat-dialog-content>
       <form [formGroup]="form">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Tenant code</mat-label>
-          <input matInput formControlName="code" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Name</mat-label>
-          <input matInput formControlName="name" />
-        </mat-form-field>
+        <p class="form-section-title">Company</p>
+        <div class="form-row code-name">
+          <mat-form-field appearance="outline">
+            <mat-label>Tenant code</mat-label>
+            <input matInput formControlName="code" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="name" />
+          </mat-form-field>
+        </div>
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Industry</mat-label>
           <mat-select formControlName="industry">
@@ -64,30 +68,39 @@ interface ProvisionTenantFormValue {
             }
           </mat-select>
         </mat-form-field>
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Owner username</mat-label>
-          <input matInput formControlName="ownerUsername" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Owner display name</mat-label>
-          <input matInput formControlName="ownerDisplayName" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>First branch code</mat-label>
-          <input matInput formControlName="branchCode" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>First branch name</mat-label>
-          <input matInput formControlName="branchName" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>First warehouse code</mat-label>
-          <input matInput formControlName="warehouseCode" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>First warehouse name</mat-label>
-          <input matInput formControlName="warehouseName" />
-        </mat-form-field>
+        <p class="form-section-title">Owner</p>
+        <div class="form-row">
+          <mat-form-field appearance="outline">
+            <mat-label>Username</mat-label>
+            <input matInput formControlName="ownerUsername" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Display name</mat-label>
+            <input matInput formControlName="ownerDisplayName" />
+          </mat-form-field>
+        </div>
+        <p class="form-section-title">First branch</p>
+        <div class="form-row code-name">
+          <mat-form-field appearance="outline">
+            <mat-label>Code</mat-label>
+            <input matInput formControlName="branchCode" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="branchName" />
+          </mat-form-field>
+        </div>
+        <p class="form-section-title">First warehouse</p>
+        <div class="form-row code-name">
+          <mat-form-field appearance="outline">
+            <mat-label>Code</mat-label>
+            <input matInput formControlName="warehouseCode" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="warehouseName" />
+          </mat-form-field>
+        </div>
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
@@ -95,7 +108,7 @@ interface ProvisionTenantFormValue {
       <button mat-flat-button color="primary" [disabled]="form.invalid" (click)="submit()">Create</button>
     </mat-dialog-actions>
   `,
-  styles: `.full-width { width: 100%; }`,
+  styles: `.code-name { grid-template-columns: 2fr 3fr; } @media (max-width: 600px) { .code-name { grid-template-columns: 1fr; } }`,
 })
 export class ProvisionTenantDialogComponent {
   readonly dialogRef = inject(MatDialogRef<ProvisionTenantDialogComponent>);
@@ -127,54 +140,103 @@ export class ProvisionTenantDialogComponent {
 @Component({
   selector: 'app-platform-tenants',
   standalone: true,
-  imports: [MatTableModule, MatButtonModule, MatChipsModule, MatProgressBarModule],
+  imports: [MatTableModule, MatButtonModule, MatIconModule, MatProgressBarModule, DatePipe],
   template: `
-    <h2>Platform tenants</h2>
-    <button mat-flat-button color="primary" (click)="openProvisionDialog()" class="mb-3">New tenant</button>
-    @if (loading()) {
-      <mat-progress-bar mode="indeterminate" />
-    }
-    @if (oneTimePassword()) {
-      <p class="otp">Owner one-time password: <strong>{{ oneTimePassword() }}</strong> — relay this securely.</p>
-    }
-    <table mat-table [dataSource]="tenants()" class="mat-elevation-z1">
-      <ng-container matColumnDef="code">
-        <th mat-header-cell *matHeaderCellDef>Code</th>
-        <td mat-cell *matCellDef="let tenant">{{ tenant.code }}</td>
-      </ng-container>
-      <ng-container matColumnDef="name">
-        <th mat-header-cell *matHeaderCellDef>Name</th>
-        <td mat-cell *matCellDef="let tenant">{{ tenant.name }}</td>
-      </ng-container>
-      <ng-container matColumnDef="industry">
-        <th mat-header-cell *matHeaderCellDef>Industry</th>
-        <td mat-cell *matCellDef="let tenant">{{ tenant.industry }}</td>
-      </ng-container>
-      <ng-container matColumnDef="status">
-        <th mat-header-cell *matHeaderCellDef>Status</th>
-        <td mat-cell *matCellDef="let tenant">
-          <mat-chip [color]="tenant.status === 'Active' ? 'primary' : 'warn'" highlighted>{{ tenant.status }}</mat-chip>
-        </td>
-      </ng-container>
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef></th>
-        <td mat-cell *matCellDef="let tenant">
-          @if (tenant.status === 'Active') {
-            <button mat-button color="warn" (click)="setStatus(tenant, 'suspend')">Suspend</button>
-          } @else {
-            <button mat-button color="primary" (click)="setStatus(tenant, 'activate')">Activate</button>
-          }
-        </td>
-      </ng-container>
+    <div class="page">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Tenants</h1>
+          <p class="page-subtitle">Every customer company on this installation.</p>
+        </div>
+        <div class="page-actions">
+          <button mat-flat-button color="primary" (click)="openProvisionDialog()">
+            <mat-icon>add</mat-icon>
+            New tenant
+          </button>
+        </div>
+      </div>
 
-      <tr mat-header-row *matHeaderRowDef="columns"></tr>
-      <tr mat-row *matRowDef="let row; columns: columns"></tr>
-    </table>
+      @if (oneTimePassword()) {
+        <div class="callout">
+          <mat-icon>vpn_key</mat-icon>
+          <div>
+            Owner one-time password: <strong class="mono">{{ oneTimePassword() }}</strong><br />
+            Relay it securely — it isn't shown again.
+          </div>
+        </div>
+      }
+
+      <div class="table-card">
+        @if (loading()) {
+          <mat-progress-bar mode="indeterminate" />
+        }
+        <table mat-table [dataSource]="tenants()">
+          <ng-container matColumnDef="tenant">
+            <th mat-header-cell *matHeaderCellDef>Tenant</th>
+            <td mat-cell *matCellDef="let tenant">
+              <div class="tenant-cell">
+                <span class="tenant-mark" [class.pharma]="tenant.industry === 'Pharma'">{{ tenant.name.charAt(0) }}</span>
+                <div>
+                  <span class="cell-primary">{{ tenant.name }}</span>
+                  <span class="cell-secondary mono">{{ tenant.code }}</span>
+                </div>
+              </div>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="industry">
+            <th mat-header-cell *matHeaderCellDef>Industry</th>
+            <td mat-cell *matCellDef="let tenant">
+              <span class="industry">
+                <mat-icon>{{ industryIcon(tenant.industry) }}</mat-icon>
+                {{ tenant.industry }}
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="created">
+            <th mat-header-cell *matHeaderCellDef>Created</th>
+            <td mat-cell *matCellDef="let tenant" class="muted">{{ tenant.createdAtUtc | date: 'mediumDate' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let tenant">
+              <span class="pill" [class.pill-success]="tenant.status === 'Active'" [class.pill-danger]="tenant.status !== 'Active'">
+                {{ tenant.status }}
+              </span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let tenant" class="cell-actions">
+              @if (tenant.status === 'Active') {
+                <button mat-button color="warn" (click)="setStatus(tenant, 'suspend')">Suspend</button>
+              } @else {
+                <button mat-button color="primary" (click)="setStatus(tenant, 'activate')">Activate</button>
+              }
+            </td>
+          </ng-container>
+
+          <tr mat-header-row *matHeaderRowDef="columns"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns"></tr>
+        </table>
+        @if (!loading() && tenants().length === 0) {
+          <div class="empty-state">
+            <mat-icon>domain_add</mat-icon>
+            <div>No tenants yet — create the first one.</div>
+          </div>
+        }
+      </div>
+    </div>
   `,
   styles: `
-    table { width: 100%; }
-    .mb-3 { margin-bottom: 1rem; }
-    .otp { margin: 1rem 0; padding: 0.75rem; background: #fef9e7; border-radius: 4px; }
+    .tenant-cell { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; }
+    .tenant-mark {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: #fff7ed; color: #c2410c; font-weight: 700;
+    }
+    .tenant-mark.pharma { background: #ecfeff; color: #0e7490; }
+    .industry { display: inline-flex; align-items: center; gap: 0.35rem; }
+    .industry .mat-icon { width: 18px; height: 18px; font-size: 18px; color: var(--so-text-muted); }
   `,
 })
 export class PlatformTenantsComponent implements OnInit {
@@ -185,7 +247,11 @@ export class PlatformTenantsComponent implements OnInit {
   readonly tenants = signal<TenantSummary[]>([]);
   readonly loading = signal(true);
   readonly oneTimePassword = signal<string | null>(null);
-  readonly columns = ['code', 'name', 'industry', 'status', 'actions'];
+  readonly columns = ['tenant', 'industry', 'created', 'status', 'actions'];
+
+  industryIcon(industry: string): string {
+    return industry === 'Restaurant' ? 'restaurant' : industry === 'Pharma' ? 'medication' : 'shopping_bag';
+  }
 
   async ngOnInit(): Promise<void> {
     await this.load();

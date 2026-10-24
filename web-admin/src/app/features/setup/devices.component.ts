@@ -4,7 +4,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
 import { MatTableModule } from '@angular/material/table';
 import { MatButtonModule } from '@angular/material/button';
-import { MatChipsModule } from '@angular/material/chips';
+import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { ConfigService } from '../../core/config.service';
 
@@ -21,52 +21,84 @@ interface DeviceSummary {
 @Component({
   selector: 'app-devices',
   standalone: true,
-  imports: [MatTableModule, MatButtonModule, MatChipsModule, MatProgressBarModule, DatePipe],
+  imports: [MatTableModule, MatButtonModule, MatIconModule, MatProgressBarModule, DatePipe],
   template: `
-    <h2>Devices</h2>
-    @if (loading()) {
-      <mat-progress-bar mode="indeterminate" />
-    }
-    <table mat-table [dataSource]="devices()" class="mat-elevation-z1">
-      <ng-container matColumnDef="platform">
-        <th mat-header-cell *matHeaderCellDef>Platform</th>
-        <td mat-cell *matCellDef="let device">{{ device.platform }}</td>
-      </ng-container>
-      <ng-container matColumnDef="deviceName">
-        <th mat-header-cell *matHeaderCellDef>Device</th>
-        <td mat-cell *matCellDef="let device">{{ device.deviceName }}</td>
-      </ng-container>
-      <ng-container matColumnDef="appVersion">
-        <th mat-header-cell *matHeaderCellDef>App version</th>
-        <td mat-cell *matCellDef="let device">{{ device.appVersion }}</td>
-      </ng-container>
-      <ng-container matColumnDef="lastSeen">
-        <th mat-header-cell *matHeaderCellDef>Last seen</th>
-        <td mat-cell *matCellDef="let device">{{ device.lastSeenAtUtc | date: 'short' }}</td>
-      </ng-container>
-      <ng-container matColumnDef="status">
-        <th mat-header-cell *matHeaderCellDef>Status</th>
-        <td mat-cell *matCellDef="let device">
-          <mat-chip [color]="device.isRevoked ? 'warn' : 'primary'" highlighted>
-            {{ device.isRevoked ? 'Revoked' : 'Active' }}
-          </mat-chip>
-        </td>
-      </ng-container>
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef></th>
-        <td mat-cell *matCellDef="let device">
-          @if (!device.isRevoked) {
-            <button mat-button color="warn" (click)="revoke(device, false)">Revoke</button>
-            <button mat-button color="warn" (click)="revoke(device, true)">Revoke + wipe</button>
-          }
-        </td>
-      </ng-container>
+    <div class="page">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Devices</h1>
+          <p class="page-subtitle">Phones and tablets signed in to the mobile app. Revoke a lost device; wipe erases its local data.</p>
+        </div>
+      </div>
+      <div class="table-card">
+        @if (loading()) {
+          <mat-progress-bar mode="indeterminate" />
+        }
+        <table mat-table [dataSource]="devices()">
+          <ng-container matColumnDef="device">
+            <th mat-header-cell *matHeaderCellDef>Device</th>
+            <td mat-cell *matCellDef="let device">
+              <div class="device-cell">
+                <span class="device-icon"><mat-icon>{{ device.platform === 'iOS' ? 'phone_iphone' : 'phone_android' }}</mat-icon></span>
+                <div>
+                  <span class="cell-primary">{{ device.deviceName ?? 'Unnamed device' }}</span>
+                  <span class="cell-secondary">{{ device.platform }}</span>
+                </div>
+              </div>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="appVersion">
+            <th mat-header-cell *matHeaderCellDef>App version</th>
+            <td mat-cell *matCellDef="let device"><span class="mono">{{ device.appVersion ?? '—' }}</span></td>
+          </ng-container>
+          <ng-container matColumnDef="lastSeen">
+            <th mat-header-cell *matHeaderCellDef>Last seen</th>
+            <td mat-cell *matCellDef="let device" class="muted">{{ device.lastSeenAtUtc ? (device.lastSeenAtUtc | date: 'medium') : '—' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let device">
+              @if (device.isRevoked) {
+                <span class="pill pill-danger">{{ device.wipeRequested ? 'Revoked · wipe' : 'Revoked' }}</span>
+              } @else {
+                <span class="pill pill-success">Active</span>
+              }
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let device" class="cell-actions">
+              @if (!device.isRevoked) {
+                <button mat-button color="warn" (click)="revoke(device, false)">Revoke</button>
+                <button mat-button color="warn" (click)="revoke(device, true)">
+                  <mat-icon>delete_forever</mat-icon>
+                  Revoke + wipe
+                </button>
+              }
+            </td>
+          </ng-container>
 
-      <tr mat-header-row *matHeaderRowDef="columns"></tr>
-      <tr mat-row *matRowDef="let row; columns: columns"></tr>
-    </table>
+          <tr mat-header-row *matHeaderRowDef="columns"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns"></tr>
+        </table>
+        @if (!loading() && devices().length === 0) {
+          <div class="empty-state">
+            <mat-icon>devices_other</mat-icon>
+            <div>No devices have signed in yet.</div>
+          </div>
+        }
+      </div>
+    </div>
   `,
-  styles: `table { width: 100%; }`,
+  styles: `
+    .device-cell { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; }
+    .device-icon {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--so-surface-muted); color: var(--so-text-muted); border: 1px solid var(--so-border);
+    }
+    .device-icon .mat-icon { width: 20px; height: 20px; font-size: 20px; }
+  `,
 })
 export class DevicesComponent implements OnInit {
   private readonly http = inject(HttpClient);
@@ -74,7 +106,7 @@ export class DevicesComponent implements OnInit {
 
   readonly devices = signal<DeviceSummary[]>([]);
   readonly loading = signal(true);
-  readonly columns = ['platform', 'deviceName', 'appVersion', 'lastSeen', 'status', 'actions'];
+  readonly columns = ['device', 'appVersion', 'lastSeen', 'status', 'actions'];
 
   async ngOnInit(): Promise<void> {
     await this.load();

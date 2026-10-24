@@ -1,17 +1,421 @@
 @use "@angular/material" as mat;
 
+/*
+ * StockOrder back-office theme.
+ * Deep navy chrome (matches the login brand panel) + indigo accent on cool-grey surfaces.
+ * Every colour lives in a --so-* token so screens never hard-code hex values.
+ */
+
+:root {
+  --so-navy-900: #0d1021;
+  --so-navy-800: #1a1f36;
+  --so-navy-700: #252b48;
+  --so-navy-600: #343b5e;
+
+  --so-accent: #4f46e5;
+  --so-accent-strong: #4338ca;
+  --so-accent-soft: #eef2ff;
+  --so-accent-ring: rgba(79, 70, 229, 0.18);
+
+  --so-bg: #f5f6fa;
+  --so-surface: #ffffff;
+  --so-surface-muted: #f9fafb;
+  --so-border: #e6e8ef;
+  --so-border-strong: #d5d9e3;
+
+  --so-text: #111827;
+  --so-text-muted: #6b7280;
+  --so-text-faint: #9ca3af;
+
+  --so-success: #047857;
+  --so-success-soft: #ecfdf5;
+  --so-warning: #b45309;
+  --so-warning-soft: #fffbeb;
+  --so-danger: #b91c1c;
+  --so-danger-soft: #fef2f2;
+  --so-info: #1d4ed8;
+  --so-info-soft: #eff6ff;
+
+  --so-radius-sm: 8px;
+  --so-radius: 12px;
+  --so-radius-lg: 16px;
+  --so-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --so-shadow: 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.04);
+  --so-shadow-lg: 0 12px 32px -8px rgba(16, 24, 40, 0.18);
+
+  --so-font: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --so-sidebar-width: 264px;
+}
+
 html {
+  color-scheme: light;
+
   @include mat.theme(
     (
-      color: mat.$azure-palette,
-      typography: Roboto,
+      color: (
+        primary: mat.$violet-palette,
+        tertiary: mat.$cyan-palette,
+        theme-type: light,
+      ),
+      typography: (
+        plain-family: "Inter",
+        brand-family: "Inter",
+      ),
       density: 0,
+    )
+  );
+
+  // Pin the exact brand colours on top of the generated palette.
+  @include mat.theme-overrides(
+    (
+      primary: #4f46e5,
+      on-primary: #ffffff,
+      primary-container: #eef2ff,
+      on-primary-container: #312e81,
+      surface: #ffffff,
+      surface-container: #ffffff,
+      surface-container-low: #f9fafb,
+      surface-container-high: #ffffff,
+      surface-container-highest: #f3f4f6,
+      outline: #d5d9e3,
+      outline-variant: #e6e8ef,
+      error: #b91c1c,
+    )
+  );
+
+  @include mat.table-overrides(
+    (
+      background-color: transparent,
+      header-headline-color: var(--so-text-muted),
+      header-headline-size: 12px,
+      header-headline-weight: 600,
+      header-headline-tracking: 0.04em,
+      row-item-label-text-color: var(--so-text),
+      row-item-label-text-size: 14px,
+      row-item-outline-color: var(--so-border),
+      header-container-height: 44px,
+      row-item-container-height: 56px,
+    )
+  );
+
+  @include mat.dialog-overrides(
+    (
+      container-shape: var(--so-radius-lg),
+      subhead-size: 20px,
+      subhead-weight: 600,
+    )
+  );
+
+  @include mat.button-overrides(
+    (
+      filled-container-shape: 10px,
+      outlined-container-shape: 10px,
+      protected-container-shape: 10px,
+      text-container-shape: 10px,
+      filled-label-text-weight: 600,
+      outlined-label-text-weight: 600,
+      text-label-text-weight: 600,
+    )
+  );
+
+  @include mat.form-field-overrides(
+    (
+      outlined-container-shape: 10px,
+      outlined-outline-color: var(--so-border-strong),
+    )
+  );
+
+  @include mat.snack-bar-overrides(
+    (
+      container-color: var(--so-navy-800),
+      supporting-text-color: #ffffff,
+      button-color: #a5b4fc,
+    )
+  );
+
+  @include mat.progress-bar-overrides(
+    (
+      active-indicator-color: var(--so-accent),
+      track-color: var(--so-accent-soft),
     )
   );
 }
 
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
-  font-family: "Segoe UI", Roboto, sans-serif;
+}
+
+body {
+  font-family: var(--so-font);
+  background: var(--so-bg);
+  color: var(--so-text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ---------- Page scaffolding ---------- */
+
+.page {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.page-title {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--so-text);
+}
+
+.page-subtitle {
+  margin: 0.35rem 0 0;
+  color: var(--so-text-muted);
+  font-size: 0.95rem;
+}
+
+.page-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.card {
+  background: var(--so-surface);
+  border: 1px solid var(--so-border);
+  border-radius: var(--so-radius);
+  box-shadow: var(--so-shadow-sm);
+  overflow: hidden;
+}
+
+/* Tables sit inside a card; rows highlight on hover. */
+.table-card {
+  @extend .card;
+  position: relative;
+  overflow-x: auto;
+
+  .mat-mdc-table {
+    width: 100%;
+  }
+
+  .mat-mdc-header-row {
+    background: var(--so-surface-muted);
+  }
+
+  .mat-mdc-header-cell {
+    text-transform: uppercase;
+  }
+
+  .mat-mdc-row {
+    transition: background-color 120ms ease;
+  }
+
+  .mat-mdc-row:hover {
+    background: var(--so-surface-muted);
+  }
+
+  .mat-mdc-row:last-child .mat-mdc-cell {
+    border-bottom: 0;
+  }
+
+  .mat-mdc-cell,
+  .mat-mdc-header-cell {
+    padding: 0 1rem;
+  }
+
+  > .mat-mdc-progress-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1;
+  }
+}
+
+.cell-actions {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.cell-primary {
+  font-weight: 600;
+  color: var(--so-text);
+}
+
+.cell-secondary {
+  display: block;
+  margin-top: 2px;
+  color: var(--so-text-muted);
+  font-size: 0.82rem;
+}
+
+.mono {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85em;
+}
+
+.muted {
+  color: var(--so-text-muted);
+}
+
+.empty-state {
+  padding: 3rem 1rem;
+  text-align: center;
+  color: var(--so-text-muted);
+
+  .mat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 40px;
+    color: var(--so-text-faint);
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* ---------- Status pills & tags ---------- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+  background: var(--so-surface-muted);
+  color: var(--so-text-muted);
+  border: 1px solid var(--so-border);
+
+  &::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+
+  &.pill-success { background: var(--so-success-soft); color: var(--so-success); border-color: transparent; }
+  &.pill-warning { background: var(--so-warning-soft); color: var(--so-warning); border-color: transparent; }
+  &.pill-danger { background: var(--so-danger-soft); color: var(--so-danger); border-color: transparent; }
+  &.pill-info { background: var(--so-info-soft); color: var(--so-info); border-color: transparent; }
+  &.pill-plain::before { display: none; }
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.3rem 0.15rem 0.6rem;
+  margin: 0.15rem 0.3rem 0.15rem 0;
+  border-radius: 8px;
+  background: var(--so-accent-soft);
+  color: var(--so-accent-strong);
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+
+  .tag-scope {
+    color: var(--so-text-muted);
+    font-weight: 500;
+  }
+
+  button {
+    display: inline-flex;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 6px;
+    opacity: 0.6;
+
+    &:hover { opacity: 1; background: rgba(79, 70, 229, 0.12); }
+
+    .mat-icon { width: 16px; height: 16px; font-size: 16px; }
+  }
+}
+
+.tag-static {
+  padding-right: 0.6rem;
+}
+
+/* ---------- Dialogs & forms ---------- */
+
+.full-width {
+  width: 100%;
+}
+
+.form-section-title {
+  margin: 0.75rem 0 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--so-text-muted);
+}
+
+.form-section-hint {
+  margin: 0 0 0.75rem;
+  color: var(--so-text-muted);
+  font-size: 0.85rem;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 0.75rem;
+}
+
+.callout {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.9rem 1rem;
+  border-radius: var(--so-radius-sm);
+  background: var(--so-warning-soft);
+  color: var(--so-warning);
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+
+  &.callout-info { background: var(--so-info-soft); color: var(--so-info); }
+}
+
+.mat-mdc-dialog-container .mat-mdc-dialog-title {
+  letter-spacing: -0.01em;
+}
+
+/* Slightly softer focus ring for keyboard users across custom elements. */
+:focus-visible {
+  outline: 2px solid var(--so-accent);
+  outline-offset: 2px;
+}
+
+/* Narrow screens: tables keep their columns and scroll sideways inside the card. */
+@media (max-width: 900px) {
+  .table-card .mat-mdc-table {
+    min-width: 760px;
+  }
+}
+
+@media (max-width: 600px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .page-title {
+    font-size: 1.35rem;
+  }
 }

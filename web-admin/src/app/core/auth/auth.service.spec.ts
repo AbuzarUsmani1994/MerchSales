@@ -76,4 +76,29 @@ describe('AuthService', () => {
     expect(service.hasTenantWidePermission('Users.Manage')).toBeFalse();
     expect(service.hasTenantWidePermission('Users.View')).toBeTrue();
   });
+
+  it('revokes the refresh token on the server with the bearer token, then forgets the session', async () => {
+    sessionStorage.setItem('stockorder.accessToken', 'access-token');
+    sessionStorage.setItem('stockorder.refreshToken', 'refresh-token');
+    // Re-create the service so it starts from the seeded sessionStorage.
+    TestBed.resetTestingModule();
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: ConfigService, useValue: { apiBaseUrl: 'http://localhost:5280' } },
+      ],
+    });
+    const auth = TestBed.inject(AuthService);
+    httpMock = TestBed.inject(HttpTestingController);
+
+    const logoutPromise = auth.logout();
+    const req = httpMock.expectOne('http://localhost:5280/api/v1/auth/logout');
+    expect(req.request.headers.get('Authorization')).toBe('Bearer access-token');
+    expect(req.request.body).toEqual({ refreshToken: 'refresh-token' });
+    expect(auth.isAuthenticated()).toBeFalse();
+    req.flush(null);
+    await logoutPromise;
+    expect(sessionStorage.getItem('stockorder.refreshToken')).toBeNull();
+  });
 });

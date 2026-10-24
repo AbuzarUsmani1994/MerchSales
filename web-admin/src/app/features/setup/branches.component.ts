@@ -7,6 +7,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatIconModule } from '@angular/material/icon';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { ConfigService } from '../../core/config.service';
 import { AuthService } from '../../core/auth/auth.service';
@@ -42,14 +43,16 @@ interface BranchRow extends BranchSummary {
     <h2 mat-dialog-title>New branch</h2>
     <mat-dialog-content>
       <form [formGroup]="form" (ngSubmit)="submit()">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Code</mat-label>
-          <input matInput formControlName="code" (input)="suggestWarehouse()" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Name</mat-label>
-          <input matInput formControlName="name" (input)="suggestWarehouse()" />
-        </mat-form-field>
+        <div class="form-row code-name">
+          <mat-form-field appearance="outline">
+            <mat-label>Code</mat-label>
+            <input matInput formControlName="code" (input)="suggestWarehouse()" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="name" (input)="suggestWarehouse()" />
+          </mat-form-field>
+        </div>
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Address</mat-label>
           <textarea matInput formControlName="address" rows="2"></textarea>
@@ -59,16 +62,18 @@ interface BranchRow extends BranchSummary {
           <mat-label>Phone</mat-label>
           <input matInput formControlName="phone" />
         </mat-form-field>
-        <h3>First warehouse</h3>
-        <p class="muted">Gets MAIN, TRANSIT and QUARANTINE locations automatically.</p>
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Warehouse code</mat-label>
-          <input matInput formControlName="warehouseCode" (input)="warehouseEdited = true" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Warehouse name</mat-label>
-          <input matInput formControlName="warehouseName" (input)="warehouseEdited = true" />
-        </mat-form-field>
+        <p class="form-section-title">First warehouse</p>
+        <p class="form-section-hint">Gets MAIN, TRANSIT and QUARANTINE locations automatically.</p>
+        <div class="form-row code-name">
+          <mat-form-field appearance="outline">
+            <mat-label>Code</mat-label>
+            <input matInput formControlName="warehouseCode" (input)="warehouseEdited = true" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="warehouseName" (input)="warehouseEdited = true" />
+          </mat-form-field>
+        </div>
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
@@ -76,7 +81,7 @@ interface BranchRow extends BranchSummary {
       <button mat-flat-button color="primary" [disabled]="form.invalid" (click)="submit()">Create</button>
     </mat-dialog-actions>
   `,
-  styles: `.full-width { width: 100%; } .muted { color: #757575; margin-top: 0; }`,
+  styles: `.code-name { grid-template-columns: 2fr 3fr; } @media (max-width: 600px) { .code-name { grid-template-columns: 1fr; } }`,
 })
 export class NewBranchDialogComponent {
   readonly dialogRef = inject(MatDialogRef<NewBranchDialogComponent>);
@@ -127,14 +132,17 @@ export class NewBranchDialogComponent {
     <h2 mat-dialog-title>New warehouse at {{ data.name }}</h2>
     <mat-dialog-content>
       <form [formGroup]="form" (ngSubmit)="submit()">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Code</mat-label>
-          <input matInput formControlName="code" />
-        </mat-form-field>
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Name</mat-label>
-          <input matInput formControlName="name" />
-        </mat-form-field>
+        <p class="form-section-hint">Gets MAIN, TRANSIT and QUARANTINE locations automatically.</p>
+        <div class="form-row code-name">
+          <mat-form-field appearance="outline">
+            <mat-label>Code</mat-label>
+            <input matInput formControlName="code" />
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Name</mat-label>
+            <input matInput formControlName="name" />
+          </mat-form-field>
+        </div>
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
@@ -142,7 +150,7 @@ export class NewBranchDialogComponent {
       <button mat-flat-button color="primary" [disabled]="form.invalid" (click)="submit()">Create</button>
     </mat-dialog-actions>
   `,
-  styles: `.full-width { width: 100%; }`,
+  styles: `.code-name { grid-template-columns: 2fr 3fr; } @media (max-width: 600px) { .code-name { grid-template-columns: 1fr; } }`,
 })
 export class NewWarehouseDialogComponent {
   readonly dialogRef = inject(MatDialogRef<NewWarehouseDialogComponent>);
@@ -166,64 +174,111 @@ export class NewWarehouseDialogComponent {
 @Component({
   selector: 'app-branches',
   standalone: true,
-  imports: [MatTableModule, MatButtonModule, MatProgressBarModule],
+  imports: [MatTableModule, MatButtonModule, MatIconModule, MatProgressBarModule],
   template: `
-    <h2>Branches &amp; warehouses</h2>
-    @if (canCreateBranches()) {
-      <button mat-flat-button color="primary" (click)="openNewBranchDialog()" class="mb-3">New branch</button>
-    }
-    @if (loading()) {
-      <mat-progress-bar mode="indeterminate" />
-    }
-    <table mat-table [dataSource]="rows()" class="mat-elevation-z1">
-      <ng-container matColumnDef="code">
-        <th mat-header-cell *matHeaderCellDef>Code</th>
-        <td mat-cell *matCellDef="let branch">{{ branch.code }}</td>
-      </ng-container>
-      <ng-container matColumnDef="name">
-        <th mat-header-cell *matHeaderCellDef>Name</th>
-        <td mat-cell *matCellDef="let branch">
-          <div>{{ branch.name }}</div>
-          @if (branch.address || branch.phone) {
-            <div class="muted">{{ branch.address }}{{ branch.address && branch.phone ? ' · ' : '' }}{{ branch.phone }}</div>
-          }
-        </td>
-      </ng-container>
-      <ng-container matColumnDef="warehouses">
-        <th mat-header-cell *matHeaderCellDef>Warehouses</th>
-        <td mat-cell *matCellDef="let branch">
-          @for (warehouse of branch.warehouses; track warehouse.id) {
-            <div>
-              <strong>{{ warehouse.code }}</strong> {{ warehouse.name }}
-              <span class="muted">({{ locationCodes(warehouse) }})</span>
-            </div>
-          } @empty {
-            <span class="warn">No warehouse — this branch can't hold stock yet</span>
-          }
-        </td>
-      </ng-container>
-      <ng-container matColumnDef="status">
-        <th mat-header-cell *matHeaderCellDef>Status</th>
-        <td mat-cell *matCellDef="let branch">{{ branch.isActive ? 'Active' : 'Inactive' }}</td>
-      </ng-container>
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef></th>
-        <td mat-cell *matCellDef="let branch" class="actions">
-          @if (branch.isActive) {
-            <button mat-button (click)="openNewWarehouseDialog(branch)">Add warehouse</button>
-          }
-        </td>
-      </ng-container>
-      <tr mat-header-row *matHeaderRowDef="columns"></tr>
-      <tr mat-row *matRowDef="let row; columns: columns"></tr>
-    </table>
+    <div class="page">
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Branches &amp; warehouses</h1>
+          <p class="page-subtitle">Outlets and the stock-holding warehouses inside each one.</p>
+        </div>
+        @if (canCreateBranches()) {
+          <div class="page-actions">
+            <button mat-flat-button color="primary" (click)="openNewBranchDialog()">
+              <mat-icon>add_business</mat-icon>
+              New branch
+            </button>
+          </div>
+        }
+      </div>
+
+      <div class="table-card">
+        @if (loading()) {
+          <mat-progress-bar mode="indeterminate" />
+        }
+        <table mat-table [dataSource]="rows()">
+          <ng-container matColumnDef="branch">
+            <th mat-header-cell *matHeaderCellDef>Branch</th>
+            <td mat-cell *matCellDef="let branch">
+              <div class="branch-cell">
+                <span class="branch-icon"><mat-icon>storefront</mat-icon></span>
+                <div>
+                  <span class="cell-primary">{{ branch.name }}</span>
+                  <span class="cell-secondary">
+                    <span class="mono">{{ branch.code }}</span>
+                    @if (branch.address) { · {{ branch.address }} }
+                    @if (branch.phone) { · {{ branch.phone }} }
+                  </span>
+                </div>
+              </div>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="warehouses">
+            <th mat-header-cell *matHeaderCellDef>Warehouses</th>
+            <td mat-cell *matCellDef="let branch">
+              @for (warehouse of branch.warehouses; track warehouse.id) {
+                <div class="warehouse">
+                  <mat-icon class="warehouse-icon">warehouse</mat-icon>
+                  <span class="warehouse-name">{{ warehouse.name }}</span>
+                  <span class="mono muted">{{ warehouse.code }}</span>
+                  <span class="locations">
+                    @for (location of warehouse.locations; track location.id) {
+                      <span class="location" [class.sellable]="location.isSellable"
+                        [title]="location.isSellable ? 'Sellable stock' : 'Not sellable'">{{ location.code }}</span>
+                    }
+                  </span>
+                </div>
+              } @empty {
+                <span class="pill pill-warning">No warehouse — can't hold stock</span>
+              }
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="status">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let branch">
+              <span class="pill" [class.pill-success]="branch.isActive">{{ branch.isActive ? 'Active' : 'Inactive' }}</span>
+            </td>
+          </ng-container>
+          <ng-container matColumnDef="actions">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let branch" class="cell-actions">
+              @if (branch.isActive) {
+                <button mat-button (click)="openNewWarehouseDialog(branch)">
+                  <mat-icon>add</mat-icon>
+                  Warehouse
+                </button>
+              }
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="columns"></tr>
+          <tr mat-row *matRowDef="let row; columns: columns"></tr>
+        </table>
+        @if (!loading() && rows().length === 0) {
+          <div class="empty-state">
+            <mat-icon>store</mat-icon>
+            <div>No branches yet.</div>
+          </div>
+        }
+      </div>
+    </div>
   `,
   styles: `
-    table { width: 100%; }
-    .mb-3 { margin-bottom: 1rem; }
-    .muted { color: #757575; font-size: 0.85em; }
-    .warn { color: #b00020; }
-    .actions { white-space: nowrap; text-align: right; }
+    .branch-cell { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0; }
+    .branch-icon {
+      width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--so-accent-soft); color: var(--so-accent);
+    }
+    .branch-icon .mat-icon { width: 20px; height: 20px; font-size: 20px; }
+    .warehouse { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; padding: 0.2rem 0; }
+    .warehouse-icon { width: 18px; height: 18px; font-size: 18px; color: var(--so-text-faint); }
+    .warehouse-name { font-weight: 500; }
+    .locations { display: inline-flex; gap: 0.25rem; flex-wrap: wrap; }
+    .location {
+      padding: 0.05rem 0.45rem; border-radius: 6px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.03em;
+      background: var(--so-surface-muted); color: var(--so-text-muted); border: 1px solid var(--so-border);
+    }
+    .location.sellable { background: var(--so-success-soft); color: var(--so-success); border-color: transparent; }
   `,
 })
 export class BranchesComponent implements OnInit {
@@ -235,7 +290,7 @@ export class BranchesComponent implements OnInit {
   private readonly branches = signal<BranchSummary[]>([]);
   private readonly warehouses = signal<WarehouseSummary[]>([]);
   readonly loading = signal(true);
-  readonly columns = ['code', 'name', 'warehouses', 'status', 'actions'];
+  readonly columns = ['branch', 'warehouses', 'status', 'actions'];
 
   /** Creating branches is tenant-wide; a branch manager only sees and extends their own branch. */
   readonly canCreateBranches = computed(() => this.auth.hasTenantWidePermission('Branches.Manage'));
