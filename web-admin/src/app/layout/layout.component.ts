@@ -35,6 +35,13 @@ const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    title: 'Catalog',
+    entries: [
+      { label: 'Menu', icon: 'restaurant_menu', routerLink: '/catalog/menu', permission: 'Catalog.View' },
+      { label: 'Categories', icon: 'category', routerLink: '/catalog/categories', permission: 'Catalog.Manage', tenantWide: true },
+    ],
+  },
+  {
     title: 'Configuration',
     entries: [
       { label: 'Feature toggles', icon: 'toggle_on', routerLink: '/setup/features', permission: 'Settings.Manage', tenantWide: true },

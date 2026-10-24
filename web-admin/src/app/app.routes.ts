@@ -43,6 +43,16 @@ export const routes: Routes = [
         canActivate: [permissionGuard('Devices.Manage')],
       },
       {
+        path: 'catalog/menu',
+        loadComponent: () => import('./features/catalog/menu.component').then((m) => m.MenuComponent),
+        canActivate: [permissionGuard('Catalog.View')],
+      },
+      {
+        path: 'catalog/categories',
+        loadComponent: () => import('./features/catalog/categories.component').then((m) => m.CategoriesComponent),
+        canActivate: [permissionGuard('Catalog.Manage', { tenantWide: true })],
+      },
+      {
         path: 'platform/tenants',
         loadComponent: () =>
           import('./features/platform/platform-tenants.component').then((m) => m.PlatformTenantsComponent),

@@ -11,6 +11,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { ConfigService } from '../../core/config.service';
 
 interface TenantSummary {
@@ -212,6 +213,9 @@ export class ProvisionTenantDialogComponent {
               } @else {
                 <button mat-button color="primary" (click)="setStatus(tenant, 'activate')">Activate</button>
               }
+              <button mat-button (click)="applyTemplate(tenant)" title="Adds units, product types and the default price list the tenant is missing">
+                Add missing template data
+              </button>
             </td>
           </ng-container>
 
@@ -243,6 +247,7 @@ export class PlatformTenantsComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly config = inject(ConfigService);
   private readonly dialog = inject(MatDialog);
+  private readonly snackBar = inject(MatSnackBar);
 
   readonly tenants = signal<TenantSummary[]>([]);
   readonly loading = signal(true);
@@ -288,6 +293,17 @@ export class PlatformTenantsComponent implements OnInit {
       this.oneTimePassword.set(result.ownerOneTimePassword);
       await this.load();
     });
+  }
+
+  async applyTemplate(tenant: TenantSummary): Promise<void> {
+    const result = await firstValueFrom(
+      this.http.post<{ rowsAdded: number }>(`${this.config.apiBaseUrl}/api/v1/platform/tenants/${tenant.id}/apply-template`, {}),
+    );
+    this.snackBar.open(
+      result.rowsAdded > 0 ? `${tenant.name}: added ${result.rowsAdded} missing rows.` : `${tenant.name} already has everything.`,
+      'OK',
+      { duration: 4000 },
+    );
   }
 
   async setStatus(tenant: TenantSummary, action: 'suspend' | 'activate'): Promise<void> {
