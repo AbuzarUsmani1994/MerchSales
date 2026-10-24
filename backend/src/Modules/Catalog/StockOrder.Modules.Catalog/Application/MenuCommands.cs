@@ -1,6 +1,8 @@
 using FluentValidation;
 using Mediator;
 using Microsoft.EntityFrameworkCore;
+using StockOrder.Infrastructure.Database;
+using StockOrder.Infrastructure.Sync;
 using StockOrder.Modules.Catalog.Domain;
 using StockOrder.Modules.Catalog.Infrastructure;
 using StockOrder.Modules.Inventory.Contracts;
@@ -247,7 +249,8 @@ public sealed class SetBranchProductCommandHandler(
     IAccessScope accessScope,
     IBranchQueries branchQueries,
     IClock clock,
-    IIdGenerator idGenerator)
+    IIdGenerator idGenerator,
+    IUnitOfWork unitOfWork)
     : ICommandHandler<SetBranchProductCommand, Result>
 {
     public async ValueTask<Result> Handle(SetBranchProductCommand command, CancellationToken ct)
@@ -289,6 +292,7 @@ public sealed class SetBranchProductCommandHandler(
         {
             var existing = await db.PriceListItems.Where(i => i.TenantId == tenantId && i.PriceListId == listId && i.ProductId == product.Id).ToListAsync(ct);
             db.PriceListItems.RemoveRange(existing);
+            await SyncTombstones.WriteAsync(unitOfWork, tenantId, "priceListItems", existing.Select(i => i.Id), ct);
         }
 
         var availability = await db.ProductBranches.FirstOrDefaultAsync(

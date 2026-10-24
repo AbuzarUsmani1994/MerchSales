@@ -37,6 +37,10 @@ public sealed class IndustryTemplate
     [JsonPropertyName("taxCodes")]
     public List<TaxCodeTemplate> TaxCodes { get; set; } = [];
 
+    /// <summary>Payment method codes (CASH, CARD, …); name and kind come from <see cref="PaymentMethodKinds"/>.</summary>
+    [JsonPropertyName("paymentMethods")]
+    public List<string> PaymentMethods { get; set; } = [];
+
     [JsonPropertyName("records")]
     public RecordsTemplate Records { get; set; } = new();
 
@@ -129,6 +133,27 @@ public sealed class RecordsTemplate
 {
     [JsonPropertyName("defaultPriceList")]
     public NamedRecordTemplate? DefaultPriceList { get; set; }
+
+    [JsonPropertyName("walkInCustomer")]
+    public NamedRecordTemplate? WalkInCustomer { get; set; }
+
+    [JsonPropertyName("openAccountingPeriodForCurrentMonth")]
+    public bool OpenAccountingPeriodForCurrentMonth { get; set; }
+}
+
+/// <summary>Display name and finance.PaymentMethod.Kind for each template payment method code.</summary>
+public static class PaymentMethodKinds
+{
+    public static readonly IReadOnlyDictionary<string, (string Name, string Kind)> ByCode =
+        new Dictionary<string, (string Name, string Kind)>(StringComparer.Ordinal)
+        {
+            ["CASH"] = ("Cash", "Cash"),
+            ["CARD"] = ("Card", "Card"),
+            ["WALLET"] = ("Wallet (JazzCash / Easypaisa)", "Wallet"),
+            ["BANK"] = ("Bank transfer", "BankTransfer"),
+            ["CHEQUE"] = ("Cheque", "Cheque"),
+            ["CREDIT"] = ("On credit", "Credit"),
+        };
 }
 
 public sealed class NamedRecordTemplate

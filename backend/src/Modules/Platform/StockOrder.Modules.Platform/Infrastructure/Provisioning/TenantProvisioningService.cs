@@ -21,6 +21,9 @@ internal sealed class TenantProvisioningService(
     ITenantProvisioningConnection provisioningConnection, IClock clock, IIdGenerator idGenerator)
     : ITenantProvisioningService
 {
+    /// <summary>New tenants trade in Pakistan time (section 2); business dates follow it.</summary>
+    private const string TenantTimeZone = "Asia/Karachi";
+
     private static readonly PasswordHasher<object> PasswordHasher = new();
 
     public async Task<ProvisionTenantResult> ProvisionAsync(ProvisionTenantRequest request, CancellationToken ct)
@@ -37,7 +40,7 @@ internal sealed class TenantProvisioningService(
             VALUES (@id, @code, @name, @industry, @timeZoneId, 0, @now);
             """,
             ("@id", tenantId), ("@code", request.Code), ("@name", request.Name),
-            ("@industry", request.Industry), ("@timeZoneId", "Asia/Karachi"), ("@now", now));
+            ("@industry", request.Industry), ("@timeZoneId", TenantTimeZone), ("@now", now));
 
         var branchId = idGenerator.NewId();
         await ExecAsync(connection, transaction, """
@@ -129,7 +132,7 @@ internal sealed class TenantProvisioningService(
                 ("@prefix", series.Prefix), ("@padding", series.PaddingLength));
         }
 
-        await TemplateCatalogSeeder.SeedAsync(connection, transaction, tenantId, template, now, ct);
+        await TemplateCatalogSeeder.SeedAsync(connection, transaction, tenantId, template, now, clock.TodayIn(TenantTimeZone), ct);
 
         await transaction.CommitAsync(ct);
 
@@ -143,14 +146,22 @@ internal sealed class TenantProvisioningService(
 
         await using var lookup = connection.CreateCommand();
         lookup.Transaction = transaction;
-        lookup.CommandText = "SELECT Industry FROM tenancy.Tenant WHERE Id = @id AND IsPlatform = 0;";
+        lookup.CommandText = "SELECT Industry, TimeZoneId FROM tenancy.Tenant WHERE Id = @id AND IsPlatform = 0;";
         lookup.Parameters.Add(new SqlParameter("@id", tenantId));
-        if (await lookup.ExecuteScalarAsync(ct) is not string industry)
+        string industry, timeZoneId;
+        await using (var reader = await lookup.ExecuteReaderAsync(ct))
         {
-            return null;
+            if (!await reader.ReadAsync(ct))
+            {
+                return null;
+            }
+
+            industry = reader.GetString(0);
+            timeZoneId = reader.GetString(1);
         }
 
-        var inserted = await TemplateCatalogSeeder.SeedAsync(connection, transaction, tenantId, IndustryTemplate.Load(industry), clock.UtcNow, ct);
+        var inserted = await TemplateCatalogSeeder.SeedAsync(
+            connection, transaction, tenantId, IndustryTemplate.Load(industry), clock.UtcNow, clock.TodayIn(timeZoneId), ct);
         await transaction.CommitAsync(ct);
         return inserted;
     }
