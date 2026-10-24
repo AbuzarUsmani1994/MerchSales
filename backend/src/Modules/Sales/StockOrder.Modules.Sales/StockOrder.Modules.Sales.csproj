@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\StockOrder.SharedKernel\StockOrder.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\StockOrder.Infrastructure\StockOrder.Infrastructure.csproj" />
+    <ProjectReference Include="..\StockOrder.Modules.Sales.Contracts\StockOrder.Modules.Sales.Contracts.csproj" />
+    <ProjectReference Include="..\..\Catalog\StockOrder.Modules.Catalog.Contracts\StockOrder.Modules.Catalog.Contracts.csproj" />
+    <ProjectReference Include="..\..\Finance\StockOrder.Modules.Finance.Contracts\StockOrder.Modules.Finance.Contracts.csproj" />
+    <ProjectReference Include="..\..\Identity\StockOrder.Modules.Identity.Contracts\StockOrder.Modules.Identity.Contracts.csproj" />
+    <ProjectReference Include="..\..\Inventory\StockOrder.Modules.Inventory.Contracts\StockOrder.Modules.Inventory.Contracts.csproj" />
+    <ProjectReference Include="..\..\Sync\StockOrder.Modules.Sync.Contracts\StockOrder.Modules.Sync.Contracts.csproj" />
+    <ProjectReference Include="..\..\Tenancy\StockOrder.Modules.Tenancy.Contracts\StockOrder.Modules.Tenancy.Contracts.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" />
+    <PackageReference Include="Mediator.Abstractions" />
+    <PackageReference Include="Dapper" />
+    <PackageReference Include="FluentValidation" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

@@ -20,6 +20,8 @@ public sealed class EndpointAuthorizationTests
         typeof(StockOrder.Modules.Inventory.InventoryModule).Assembly,
         typeof(StockOrder.Modules.Sync.SyncModule).Assembly,
         typeof(StockOrder.Modules.Catalog.CatalogModule).Assembly,
+        typeof(StockOrder.Modules.Finance.FinanceModule).Assembly,
+        typeof(StockOrder.Modules.Sales.SalesModule).Assembly,
     ];
 
     [Fact]

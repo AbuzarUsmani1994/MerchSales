@@ -1,8 +1,10 @@
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using StockOrder.Infrastructure.Correlation;
+using StockOrder.SharedKernel.Errors;
 
 namespace StockOrder.Infrastructure.Api;
 
@@ -17,6 +19,29 @@ public sealed class GlobalExceptionHandler(
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
+        if (exception is DbUpdateConcurrencyException)
+        {
+            // Someone else changed the row between our read and write (rowversion, section 9): the
+            // request lost the race, which is the client's 412, not a server fault.
+            if (logger.IsEnabled(LogLevel.Information))
+            {
+                logger.LogInformation("Concurrency conflict. TraceId={TraceId}", correlationId.CorrelationId);
+            }
+
+            var conflict = new ProblemDetails
+            {
+                Type = $"https://errors.stockorder.app/{ErrorCodes.ConcurrencyConflict}",
+                Title = ErrorCodes.ConcurrencyConflict,
+                Status = StatusCodes.Status412PreconditionFailed,
+                Detail = "Someone else changed this record at the same time. Reload and try again.",
+            };
+            conflict.Extensions["code"] = ErrorCodes.ConcurrencyConflict;
+            conflict.Extensions["traceId"] = correlationId.CorrelationId;
+            httpContext.Response.StatusCode = StatusCodes.Status412PreconditionFailed;
+            await httpContext.Response.WriteAsJsonAsync(conflict, cancellationToken);
+            return true;
+        }
+
         logger.LogError(exception, "Unhandled exception. TraceId={TraceId}", correlationId.CorrelationId);
 
         var problem = new ProblemDetails

@@ -1,5 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
 using StockOrder.Infrastructure.Database;
+using StockOrder.Modules.Catalog.Contracts;
 using StockOrder.Modules.Catalog.Infrastructure;
 using StockOrder.Modules.Sync.Contracts;
 using StockOrder.SharedKernel.Context;
@@ -12,6 +13,7 @@ public static class CatalogModule
     {
         services.AddModuleDbContext<CatalogDbContext>(
             (sp, options) => new CatalogDbContext(options, sp.GetRequiredService<ICurrentUserContext>()));
+        services.AddScoped<ISalesCatalog, SalesCatalog>();
         services.AddScoped<ISyncSource, UomsSyncSource>();
         services.AddScoped<ISyncSource, CategoriesSyncSource>();
         services.AddScoped<ISyncSource, ProductsSyncSource>();

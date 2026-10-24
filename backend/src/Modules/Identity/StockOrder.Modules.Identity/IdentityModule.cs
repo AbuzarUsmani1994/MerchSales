@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
 using StockOrder.Infrastructure.Database;
+using StockOrder.Modules.Identity.Contracts;
 using StockOrder.Modules.Identity.Infrastructure;
 using StockOrder.Modules.Identity.Infrastructure.Auth;
 using StockOrder.Modules.Identity.Infrastructure.Authorization;
@@ -21,6 +22,7 @@ public static class IdentityModule
         services.AddScoped<Func<IdentityDbContext>>(sp => sp.GetRequiredService<IdentityDbContext>);
         services.AddScoped<IPermissionLoader, PermissionLoader>();
         services.AddScoped<IAccessScope, UserAccessScope>();
+        services.AddScoped<IUserDirectory, UserDirectory>();
         services.AddScoped<ISyncSource, PermissionsSyncSource>();
         services.AddScoped<ISyncCommandHandler, UpdatePushTokenCommandHandler>();
         services.AddSingleton<IMfaSecretProtector, MfaSecretProtector>();

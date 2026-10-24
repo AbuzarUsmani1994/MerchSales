@@ -35,6 +35,7 @@ public sealed record SyncPushResult(IReadOnlyList<SyncCommandResult> Results);
 public sealed class SyncPushCommandHandler(
     IEnumerable<ISyncCommandHandler> handlers,
     IUnitOfWork unitOfWork,
+    ScopedDbContexts dbContexts,
     ICurrentUserContext currentUser,
     IClock clock,
     ILogger<SyncPushCommandHandler> logger)
@@ -137,6 +138,7 @@ public sealed class SyncPushCommandHandler(
             if (outcome.Status is SyncCommandStatus.Rejected or SyncCommandStatus.Failed)
             {
                 transaction.Rollback(savepoint);
+                dbContexts.ClearChangeTrackers();
             }
 
             return outcome;
@@ -144,6 +146,7 @@ public sealed class SyncPushCommandHandler(
         catch (Exception e) when (e is not OperationCanceledException)
         {
             transaction.Rollback(savepoint);
+            dbContexts.ClearChangeTrackers();
             logger.LogError(e, "Sync command {CommandId} of type {CommandType} failed", item.Id, item.Type);
             return new SyncCommandOutcome(SyncCommandStatus.Failed, "COMMAND_FAILED", "The server could not apply this command.", null);
         }

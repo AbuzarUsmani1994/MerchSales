@@ -15,6 +15,7 @@ public static class InventoryModule
 
         services.AddScoped<IWarehouseService, WarehouseService>();
         services.AddScoped<IProductStockSetup, ProductStockSetup>();
+        services.AddScoped<IWarehouseQueries, WarehouseQueries>();
 
         return services;
     }

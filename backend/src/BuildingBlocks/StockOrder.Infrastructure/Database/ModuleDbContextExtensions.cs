@@ -27,6 +27,7 @@ public static class ModuleDbContextExtensions
                 .ReplaceService<IModelCacheKeyFactory, PerScopeModelCacheKeyFactory>();
 
             var context = factory(sp, optionsBuilder.Options);
+            sp.GetRequiredService<ScopedDbContexts>().Add(context);
 
             if (unitOfWork.Transaction is not null)
             {

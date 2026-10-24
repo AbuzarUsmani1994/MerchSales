@@ -89,7 +89,18 @@ internal sealed class OutboxDispatcherService(
     {
         if (!_handlersByType.TryGetValue(message.MessageType, out var handler))
         {
-            logger.LogWarning("No outbox handler registered for MessageType={MessageType}", message.MessageType);
+            // Events nobody consumes yet (e.g. SalesOrderConfirmed before any handler exists) are done:
+            // left pending they would be re-polled forever and, once 50 piled up, starve real messages.
+            if (logger.IsEnabled(LogLevel.Debug))
+            {
+                logger.LogDebug("No outbox handler registered for MessageType={MessageType}; marking processed", message.MessageType);
+            }
+
+            await ExecuteAsync(connection, """
+                UPDATE platform.OutboxMessage
+                SET ProcessedAtUtc = SYSUTCDATETIME(), LastError = @error
+                WHERE Id = @id;
+                """, message.Id, "No handler registered", ct);
             return;
         }
 

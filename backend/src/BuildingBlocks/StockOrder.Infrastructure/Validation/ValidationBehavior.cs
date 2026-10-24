@@ -41,7 +41,9 @@ public sealed class ValidationBehavior<TMessage, TResponse>(IEnumerable<IValidat
             .GroupBy(f => f.PropertyName)
             .ToDictionary(g => g.Key, g => (object?)g.Select(f => f.ErrorMessage).ToArray());
 
-        var error = Error.Validation("One or more fields failed validation.", errorsByField!);
+        // Section 9: field messages go in the ProblemDetails `errors` extension.
+        var error = Error.Validation(
+            "One or more fields failed validation.", new Dictionary<string, object?> { ["errors"] = errorsByField });
 
         if (!typeof(Result).IsAssignableFrom(typeof(TResponse)))
         {

@@ -13,6 +13,8 @@
     <ProjectReference Include="..\..\Modules\Inventory\StockOrder.Modules.Inventory\StockOrder.Modules.Inventory.csproj" />
     <ProjectReference Include="..\..\Modules\Sync\StockOrder.Modules.Sync\StockOrder.Modules.Sync.csproj" />
     <ProjectReference Include="..\..\Modules\Catalog\StockOrder.Modules.Catalog\StockOrder.Modules.Catalog.csproj" />
+    <ProjectReference Include="..\..\Modules\Finance\StockOrder.Modules.Finance\StockOrder.Modules.Finance.csproj" />
+    <ProjectReference Include="..\..\Modules\Sales\StockOrder.Modules.Sales\StockOrder.Modules.Sales.csproj" />
   </ItemGroup>
 
   <ItemGroup>

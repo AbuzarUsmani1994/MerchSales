@@ -17,11 +17,13 @@ using StockOrder.Infrastructure.Logging;
 using StockOrder.Infrastructure.Mobile;
 using StockOrder.Infrastructure.Startup;
 using StockOrder.Modules.Catalog;
+using StockOrder.Modules.Finance;
 using StockOrder.Modules.Identity;
 using StockOrder.Modules.Inventory;
 using StockOrder.Modules.Sync;
 using StockOrder.Modules.Platform;
 using StockOrder.Modules.Platform.Infrastructure.Bootstrap;
+using StockOrder.Modules.Sales;
 using StockOrder.Modules.Tenancy;
 
 // `StockOrder.Api.exe bootstrap-platform --admin <username>` runs the one-time platform
@@ -44,6 +46,8 @@ builder.Services.AddPlatformModule();
 builder.Services.AddInventoryModule();
 builder.Services.AddSyncModule();
 builder.Services.AddCatalogModule();
+builder.Services.AddFinanceModule();
+builder.Services.AddSalesModule();
 
 builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Tenancy.TenancyModule).Assembly);
 builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Identity.IdentityModule).Assembly);
@@ -51,6 +55,8 @@ builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Platform.Pl
 builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Inventory.InventoryModule).Assembly);
 builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Sync.SyncModule).Assembly);
 builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Catalog.CatalogModule).Assembly);
+builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Finance.FinanceModule).Assembly);
+builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Sales.SalesModule).Assembly);
 
 builder.Services.AddMediator(options =>
 {
@@ -95,7 +101,7 @@ builder.Services.AddCors(options =>
         .WithOrigins(adminSiteOrigin)
         .AllowAnyHeader()
         .AllowAnyMethod()
-        .WithExposedHeaders(CorrelationIdMiddleware.HeaderName));
+        .WithExposedHeaders(CorrelationIdMiddleware.HeaderName, "ETag"));
 });
 
 builder.Services.AddRateLimiter(options =>

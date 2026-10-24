@@ -17,6 +17,7 @@ public static class TenancyModule
         services.AddScoped<IBranchQueries, BranchQueriesAdapter>();
         services.AddScoped<IFeatureQueries, FeatureQueriesAdapter>();
         services.AddScoped<ISettingQueries, SettingQueriesAdapter>();
+        services.AddScoped<ITenantQueries, TenantQueriesAdapter>();
         services.AddScoped<ISyncSource, SettingsSyncSource>();
         services.AddScoped<ISyncSource, FeaturesSyncSource>();
 

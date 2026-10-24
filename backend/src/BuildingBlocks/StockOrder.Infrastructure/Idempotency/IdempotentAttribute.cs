@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using StockOrder.Infrastructure.Database;
 using StockOrder.SharedKernel.Context;
 using StockOrder.SharedKernel.Errors;
@@ -18,13 +19,15 @@ namespace StockOrder.Infrastructure.Idempotency;
 /// creates or posts something. Same key + same request body replays the stored response;
 /// same key + a different body is rejected with IDEMPOTENCY_KEY_REUSED. Records are kept
 /// for 7 days (platform.IdempotencyRecord, cleaned up by the Worker's daily job).
+/// A resource filter, so it runs before model binding and can still read the raw body; only
+/// successful responses are kept (a failed request rolls back, its record with it).
 /// </summary>
 [AttributeUsage(AttributeTargets.Method | AttributeTargets.Class)]
-public sealed class IdempotentAttribute : Attribute, IAsyncActionFilter
+public sealed class IdempotentAttribute : Attribute, IAsyncResourceFilter
 {
     private const string HeaderName = "Idempotency-Key";
 
-    public async Task OnActionExecutionAsync(ActionExecutingContext context, ActionExecutionDelegate next)
+    public async Task OnResourceExecutionAsync(ResourceExecutingContext context, ResourceExecutionDelegate next)
     {
         var httpContext = context.HttpContext;
         if (!httpContext.Request.Headers.TryGetValue(HeaderName, out var keyHeader) ||
@@ -72,7 +75,9 @@ public sealed class IdempotentAttribute : Attribute, IAsyncActionFilter
         if (executedContext.Result is ObjectResult { Value: not null } objectResult)
         {
             var statusCode = objectResult.StatusCode ?? 200;
-            var responseBody = JsonSerializer.Serialize(objectResult.Value);
+            // The same JSON shape the client got the first time (camelCase, the app's options).
+            var jsonOptions = httpContext.RequestServices.GetRequiredService<IOptions<Microsoft.AspNetCore.Mvc.JsonOptions>>().Value.JsonSerializerOptions;
+            var responseBody = JsonSerializer.Serialize(objectResult.Value, objectResult.Value.GetType(), jsonOptions);
             await InsertRecordAsync(
                 unitOfWork, currentUser.TenantId, currentUser.UserId, key,
                 httpContext.Request.Path, requestHash, statusCode, responseBody,

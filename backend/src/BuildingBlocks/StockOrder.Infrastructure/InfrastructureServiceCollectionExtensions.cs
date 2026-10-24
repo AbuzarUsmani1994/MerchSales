@@ -42,6 +42,7 @@ public static class InfrastructureServiceCollectionExtensions
 
         services.AddScoped<ITenantConnectionFactory, TenantConnectionFactory>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<ScopedDbContexts>();
         services.AddScoped<IOutboxWriter, OutboxWriter>();
         services.AddScoped<INumberSeriesService, NumberSeriesService>();
         services.AddScoped<AuditSaveChangesInterceptor>();
