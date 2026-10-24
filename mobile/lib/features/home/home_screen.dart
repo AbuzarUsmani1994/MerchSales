@@ -8,6 +8,7 @@ import '../../core/sync/offline_policy.dart';
 import '../../core/sync/sync_engine.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../shared/theme.dart';
+import '../ordering/order_providers.dart';
 
 final _metaProvider = StreamProvider.family<String?, String>((ref, key) => ref.watch(databaseProvider).watchMeta(key));
 final pendingCountProvider = StreamProvider<int>((ref) => ref.watch(databaseProvider).watchPendingCount());
@@ -18,8 +19,8 @@ final _biometricOfferProvider = FutureProvider<bool>((ref) async {
   return choice == null && await ref.watch(biometricServiceProvider).isAvailable();
 });
 
-/// Home dashboard (section 14). Phase 0 shows the phone's sync health and access; the daily
-/// work screens (orders, receiving, counts, counter sale) come with Phase 1.
+/// Home dashboard (section 14): taking orders, plus the phone's sync health and access.
+/// Receiving, counts and the counter sale come later.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -62,6 +63,7 @@ class HomeScreen extends ConsumerWidget {
             Text('${profile?.username ?? ''} · ${profile?.tenantCode ?? ''}', style: const TextStyle(color: AppColors.textMuted)),
             const SizedBox(height: 20),
             const _OfflineBanner(),
+            const _OrderingCard(),
             const _SyncCard(),
             const SizedBox(height: 12),
             const _BiometricOffer(),
@@ -109,6 +111,48 @@ class HomeScreen extends ConsumerWidget {
 
     if (choice == 'sync') await ref.read(syncControllerProvider.notifier).syncNow();
     if (choice == 'discard') await session.signOut(discardPending: true);
+  }
+}
+
+/// Taking orders, for users with Sales.Order.Create at a branch (the menu comes from sync).
+class _OrderingCard extends ConsumerWidget {
+  const _OrderingCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    if ((ref.watch(orderBranchesProvider).value ?? const []).isEmpty) return const SizedBox.shrink();
+
+    Widget action(Key key, IconData icon, String title, String subtitle, String route, {bool primary = false}) => Expanded(
+          child: Material(
+            color: primary ? AppColors.accent : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            child: InkWell(
+              key: key,
+              borderRadius: BorderRadius.circular(16),
+              onTap: () => context.push(route),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Icon(icon, color: primary ? Colors.white : AppColors.accent, size: 28),
+                  const SizedBox(height: 10),
+                  Text(title, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: primary ? Colors.white : AppColors.navy)),
+                  const SizedBox(height: 2),
+                  Text(subtitle, style: TextStyle(fontSize: 12, color: primary ? Colors.white70 : AppColors.textMuted)),
+                ]),
+              ),
+            ),
+          ),
+        );
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(children: [
+        action(const Key('home-new-order'), Icons.add_shopping_cart, l10n.newOrder, l10n.newOrderHint, '/order', primary: true),
+        const SizedBox(width: 12),
+        action(const Key('home-orders'), Icons.receipt_long_outlined, l10n.ordersTitle, l10n.ordersHint, '/orders'),
+      ]),
+    );
   }
 }
 

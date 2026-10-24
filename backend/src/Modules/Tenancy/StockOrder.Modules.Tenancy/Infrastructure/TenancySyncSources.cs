@@ -53,6 +53,40 @@ internal sealed class FeaturesSyncSource(IUnitOfWork unitOfWork, ICurrentUserCon
     private sealed record FeatureRow(string Key, bool IsEnabled, byte[] RowVer);
 }
 
+/// <summary>
+/// Section 12 entity "branches": the branches the user works at (any role there), all of them
+/// for an all-branches role. The phone uses it to name and pick the branch it takes orders for.
+/// </summary>
+internal sealed class BranchesSyncSource(IUnitOfWork unitOfWork, ICurrentUserContext currentUser, IAccessScope accessScope) : ISyncSource
+{
+    public string Entity => "branches";
+
+    public async Task<SyncEntityPage> PullAsync(SyncPullRequest request, CancellationToken ct)
+    {
+        var grants = await accessScope.GetGrantsAsync(ct);
+        var parameters = TenancySyncSql.Parameters(currentUser.TenantId, request);
+        var branchIds = grants.Where(g => g.BranchId is not null).Select(g => g.BranchId!.Value).Distinct().ToArray();
+        parameters.Add("allBranches", grants.Any(g => g.BranchId is null));
+        parameters.Add("branchIds", branchIds.Length > 0 ? branchIds : [Guid.Empty]);
+
+        var rows = (await unitOfWork.Connection.QueryAsync<BranchRow>(new CommandDefinition(
+            """
+            SELECT TOP (@limit) Id, Code, Name, IsActive, RowVer
+            FROM tenancy.Branch
+            WHERE TenantId = @tenantId AND RowVer > @after AND RowVer < @upper
+              AND (@allBranches = 1 OR Id IN @branchIds)
+            ORDER BY RowVer;
+            """,
+            parameters,
+            unitOfWork.Transaction,
+            cancellationToken: ct))).ToList();
+
+        return TenancySyncSql.Page(rows, r => r.RowVer, r => new { r.Id, r.Code, r.Name, r.IsActive }, request);
+    }
+
+    private sealed record BranchRow(Guid Id, string Code, string Name, bool IsActive, byte[] RowVer);
+}
+
 internal static class TenancySyncSql
 {
     public static DynamicParameters Parameters(Guid tenantId, SyncPullRequest request)

@@ -20,6 +20,7 @@ public static class TenancyModule
         services.AddScoped<ITenantQueries, TenantQueriesAdapter>();
         services.AddScoped<ISyncSource, SettingsSyncSource>();
         services.AddScoped<ISyncSource, FeaturesSyncSource>();
+        services.AddScoped<ISyncSource, BranchesSyncSource>();
 
         return services;
     }

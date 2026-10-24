@@ -9,6 +9,9 @@ import 'features/auth/change_password_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/unlock_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/ordering/cart_screen.dart';
+import 'features/ordering/menu_screen.dart';
+import 'features/ordering/orders_screen.dart';
 import 'features/sync/sync_status_screen.dart';
 import 'features/version_gate/version_gate_screen.dart';
 import 'l10n/generated/app_localizations.dart';
@@ -49,6 +52,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/update', builder: (context, state) => const VersionGateScreen()),
       GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
       GoRoute(path: '/sync', builder: (context, state) => const SyncStatusScreen()),
+      GoRoute(path: '/order', builder: (context, state) => const MenuScreen()),
+      GoRoute(path: '/order/cart', builder: (context, state) => const CartScreen()),
+      GoRoute(path: '/orders', builder: (context, state) => const OrdersScreen()),
     ],
   );
 });

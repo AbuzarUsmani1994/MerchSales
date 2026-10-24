@@ -1,7 +1,6 @@
 {
   "@@locale": "en",
   "appTitle": "StockOrder",
-
   "loginTitle": "Sign in",
   "loginSubtitle": "Use the details your manager gave you.",
   "tenantCode": "Company code",
@@ -17,7 +16,6 @@
   "deviceWipedMessage": "This phone was disconnected by your administrator and its data was erased.",
   "sessionExpiredMessage": "Your session ended. Please sign in again.",
   "fieldRequired": "Required",
-
   "changePasswordTitle": "Set a new password",
   "changePasswordSubtitle": "You signed in with a one-time password. Choose your own to continue.",
   "currentPassword": "One-time or current password",
@@ -28,37 +26,86 @@
   "passwordSameAsUsername": "Can't be your username",
   "passwordsDontMatch": "Passwords don't match",
   "changePassword": "Change password",
-
   "unlockTitle": "Unlock StockOrder",
   "unlockReason": "Confirm it's you to open StockOrder",
   "unlock": "Unlock",
   "usePasswordInstead": "Sign in with password instead",
-
   "homeGreeting": "Hello, {name}",
-  "@homeGreeting": { "placeholders": { "name": { "type": "String" } } },
+  "@homeGreeting": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
   "syncCardTitle": "Sync",
   "lastSynced": "Last synced {when}",
-  "@lastSynced": { "placeholders": { "when": { "type": "String" } } },
+  "@lastSynced": {
+    "placeholders": {
+      "when": {
+        "type": "String"
+      }
+    }
+  },
   "neverSynced": "Not synced yet",
   "justNow": "just now",
   "minutesAgo": "{count, plural, =1{1 minute ago} other{{count} minutes ago}}",
-  "@minutesAgo": { "placeholders": { "count": { "type": "int" } } },
+  "@minutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "hoursAgo": "{count, plural, =1{1 hour ago} other{{count} hours ago}}",
-  "@hoursAgo": { "placeholders": { "count": { "type": "int" } } },
+  "@hoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "pendingChanges": "{count, plural, =0{Everything sent} =1{1 change waiting to send} other{{count} changes waiting to send}}",
-  "@pendingChanges": { "placeholders": { "count": { "type": "int" } } },
+  "@pendingChanges": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "syncNow": "Sync now",
   "syncing": "Syncing…",
   "syncFailed": "Last sync failed: {error}",
-  "@syncFailed": { "placeholders": { "error": { "type": "String" } } },
+  "@syncFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
   "offlineBlockedTitle": "Sync needed",
   "offlineBlockedBody": "This phone hasn't synced for more than {hours} hours. New transactions are paused until it syncs.",
-  "@offlineBlockedBody": { "placeholders": { "hours": { "type": "int" } } },
+  "@offlineBlockedBody": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
   "accessCardTitle": "Your access",
   "accessSummary": "{permissions} permissions · {features} features on",
-  "@accessSummary": { "placeholders": { "permissions": { "type": "int" }, "features": { "type": "int" } } },
+  "@accessSummary": {
+    "placeholders": {
+      "permissions": {
+        "type": "int"
+      },
+      "features": {
+        "type": "int"
+      }
+    }
+  },
   "comingSoonTitle": "Daily work",
-  "comingSoonBody": "Orders, receiving, stock counts and the cash counter arrive in the next release. This version sets up your phone and keeps it in sync.",
+  "comingSoonBody": "Receiving, stock counts and the cash counter arrive in a later release.",
   "biometricOfferTitle": "Unlock with fingerprint?",
   "biometricOfferBody": "Next time, open the app with your fingerprint or face instead of typing your password.",
   "enable": "Turn on",
@@ -70,25 +117,78 @@
   "signOut": "Sign out",
   "signOutPendingTitle": "Unsent changes",
   "signOutPendingBody": "{count, plural, =1{1 change hasn't reached the server yet.} other{{count} changes haven't reached the server yet.}} Sync first, or sign out and discard them.",
-  "@signOutPendingBody": { "placeholders": { "count": { "type": "int" } } },
+  "@signOutPendingBody": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "discardAndSignOut": "Discard and sign out",
   "cancel": "Cancel",
-
   "pendingSection": "Waiting to send",
   "rejectedSection": "Rejected by the server",
   "nothingPending": "Nothing waiting. Changes you make are sent automatically.",
   "attempts": "{count, plural, =1{1 attempt} other{{count} attempts}}",
-  "@attempts": { "placeholders": { "count": { "type": "int" } } },
+  "@attempts": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "dismiss": "Dismiss",
   "serverTime": "Server time",
   "deviceId": "Device id",
   "appVersion": "App version",
-
   "updateTitle": "Update required",
   "updateBody": "This version of the app is no longer supported. Install the latest version to continue.",
   "updateLink": "Download link",
   "copied": "Copied",
   "copyLink": "Copy link",
   "checkAgain": "Check again",
-  "askAdminForUpdate": "Ask your administrator for the latest app."
+  "askAdminForUpdate": "Ask your administrator for the latest app.",
+  "newOrder": "New order",
+  "newOrderHint": "Take an order from the menu",
+  "ordersTitle": "Orders",
+  "ordersHint": "See what the cashier did with your orders",
+  "menuTitle": "Menu",
+  "searchMenu": "Search the menu",
+  "allCategories": "All",
+  "otherCategory": "Other",
+  "noPrice": "No price",
+  "menuEmptyTitle": "The menu is empty",
+  "menuEmptyBody": "Nothing is on the menu for this branch yet, or it hasn't synced. Pull down to sync.",
+  "viewOrder": "View order",
+  "cartItems": "{count, plural, =1{1 item} other{{count} items}}",
+  "@cartItems": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "yourOrder": "Your order",
+  "orderLabel": "Table or customer name",
+  "orderLabelHint": "e.g. Table 4, or Ali (takeaway)",
+  "orderLabelRequired": "Say who the order is for, so the cashier can find it.",
+  "itemNote": "Note for this item",
+  "addNote": "Add note",
+  "total": "Total",
+  "estimatedTotalHint": "The cashier's screen shows the final total.",
+  "sendToCashier": "Send to cashier",
+  "orderQueued": "Order saved. It goes to the cashier on the next sync.",
+  "cartEmpty": "Nothing in the order yet.",
+  "chooseBranch": "Branch",
+  "noOrderBranch": "You don't take orders at any branch. Ask your manager.",
+  "noOrdersYet": "No orders yet.",
+  "statusSending": "Sending",
+  "statusToPay": "At the cashier",
+  "statusPaid": "Paid",
+  "statusCancelled": "Cancelled",
+  "statusRejected": "Not accepted",
+  "takenByYou": "by you",
+  "walkIn": "Walk-in",
+  "offlineCantOrder": "You've been offline too long to take new orders. Connect and sync first.",
+  "ok": "OK"
 }

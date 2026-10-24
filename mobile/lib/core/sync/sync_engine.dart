@@ -105,13 +105,17 @@ class SyncEngine {
             .toList(),
       );
 
+      final byId = {for (final c in batch) c.id: c};
       for (final result in results) {
+        final command = byId[result.id];
         switch (result.status) {
           case 'Applied' || 'AppliedWithChanges':
             await _db.markApplied(result.id, result.result == null ? null : jsonEncode(result.result));
+            if (command != null) await _recordOrderOutcome(command, result);
             pushed++;
           case 'Rejected':
             await _db.markRejected(result.id, result.errorCode, result.message);
+            if (command != null) await _recordOrderOutcome(command, result);
             rejected++;
           default:
             // Failed: the server applied nothing and kept no record; retried next run with the same id.
@@ -121,6 +125,27 @@ class SyncEngine {
     }
 
     return (pushed, rejected);
+  }
+
+  /// Shows the outcome of a phone order straight away, before the next pull brings the server's copy.
+  Future<void> _recordOrderOutcome(OutboxCommand command, PushResult result) async {
+    if (command.type != 'CreateSalesOrder') return;
+    final orderId = (jsonDecode(command.payloadJson) as Map<String, dynamic>)['id'] as String?;
+    if (orderId == null) return;
+
+    if (result.status == 'Rejected') {
+      await _db.recordOrderOutcome(orderId, error: result.message ?? result.errorCode);
+      return;
+    }
+
+    final body = result.result is Map<String, dynamic> ? result.result as Map<String, dynamic> : const <String, dynamic>{};
+    final serverIds = body['serverIds'] is Map<String, dynamic> ? body['serverIds'] as Map<String, dynamic> : const <String, dynamic>{};
+    await _db.recordOrderOutcome(
+      orderId,
+      serverId: serverIds['salesOrder'] as String?,
+      documentNo: body['documentNo'] as String?,
+      status: body['status'] as String? ?? 'Confirmed',
+    );
   }
 
   Future<void> _pull() async {
@@ -146,6 +171,8 @@ class SyncEngine {
             .map((f) => (key: f['key'] as String, isEnabled: f['isEnabled'] as bool))
             .toList(),
         permissions: permissions,
+        rows: response.changes,
+        tombstones: response.tombstones,
       );
 
       if (!response.anyHasMore) return;

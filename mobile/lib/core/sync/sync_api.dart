@@ -50,11 +50,14 @@ class SyncStatus {
 }
 
 class PullResponse {
-  const PullResponse({required this.tokens, required this.hasMore, required this.changes});
+  const PullResponse({required this.tokens, required this.hasMore, required this.changes, this.tombstones = const []});
 
   final Map<String, String> tokens;
   final Map<String, bool> hasMore;
   final Map<String, List<Map<String, dynamic>>> changes;
+
+  /// Rows the server deleted (section 7 sync.Tombstone): drop the local copy.
+  final List<({String entity, String id})> tombstones;
 
   bool get anyHasMore => hasMore.values.any((more) => more);
 
@@ -64,6 +67,10 @@ class PullResponse {
         changes: (json['changes'] as Map).map(
           (k, v) => MapEntry(k as String, (v as List).cast<Map<String, dynamic>>()),
         ),
+        tombstones: ((json['tombstones'] as List?) ?? const [])
+            .cast<Map<String, dynamic>>()
+            .map((t) => (entity: t['entity'] as String, id: t['id'] as String))
+            .toList(),
       );
 }
 
