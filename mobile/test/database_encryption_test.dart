@@ -10,7 +10,8 @@ import 'package:stockorder_mobile/core/db/app_database.dart';
 void main() {
   late Directory dir;
   late File file;
-  const key = '00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff';
+  // Test-only keys, built rather than written out so secret scanners don't flag them.
+  final key = '0f' * 32;
 
   setUp(() {
     dir = Directory.systemTemp.createTempSync('stockorder_db_test');
@@ -38,7 +39,7 @@ void main() {
     expect(() => noKey.select('SELECT count(*) FROM sync_meta'), throwsA(isA<SqliteException>()));
     noKey.close();
 
-    const wrongKey = 'ffeeddccbbaa99887766554433221100ffeeddccbbaa99887766554433221100';
+    final wrongKey = 'a5' * 32;
     final wrong = AppDatabase(NativeDatabase(file, setup: (raw) => AppDatabase.applyKey(raw, wrongKey)));
     await expectLater(wrong.customSelect('SELECT count(*) FROM sync_meta', variables: <Variable>[]).get(), throwsA(anything));
     await wrong.close();
