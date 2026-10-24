@@ -1,0 +1,7 @@
+# Secret scan (section 17.1): gitleaks' default rules, plus one allowlist.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Flutter tests use dummy SQLCipher keys; they are not secrets."
+paths = ['''^mobile/test/.*_test\.dart$''']
