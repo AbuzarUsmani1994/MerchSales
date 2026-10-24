@@ -87,7 +87,8 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
     });
 
 builder.Services.AddAuthorization();
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new StockOrder.Infrastructure.Api.UtcDateTimeJsonConverter()));
 builder.Services.AddOpenApi();
 
 // CORS allows only the admin site origin (section 17). AdminSite:Origin is a plain

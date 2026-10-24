@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard, permissionGuard } from './core/auth/auth.guard';
+import { homeRedirectGuard } from './layout/nav';
 
 export const routes: Routes = [
   {
@@ -43,6 +44,11 @@ export const routes: Routes = [
         canActivate: [permissionGuard('Devices.Manage')],
       },
       {
+        path: 'sales/orders',
+        loadComponent: () => import('./features/sales/orders.component').then((m) => m.OrdersComponent),
+        canActivate: [permissionGuard('Sales.View')],
+      },
+      {
         path: 'catalog/menu',
         loadComponent: () => import('./features/catalog/menu.component').then((m) => m.MenuComponent),
         canActivate: [permissionGuard('Catalog.View')],
@@ -58,7 +64,12 @@ export const routes: Routes = [
           import('./features/platform/platform-tenants.component').then((m) => m.PlatformTenantsComponent),
         canActivate: [permissionGuard('Platform.Tenants.Manage')],
       },
-      { path: '', redirectTo: 'setup/users', pathMatch: 'full' },
+      {
+        path: '',
+        pathMatch: 'full',
+        canActivate: [homeRedirectGuard],
+        loadComponent: () => import('./features/home/no-access.component').then((m) => m.NoAccessComponent),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

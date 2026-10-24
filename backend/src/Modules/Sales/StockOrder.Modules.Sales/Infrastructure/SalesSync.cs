@@ -119,7 +119,7 @@ internal sealed class OpenOrdersSyncSource(
             orders.Select(o => (object)new
             {
                 o.Id, o.DocumentNo, o.ClientDocumentId, o.Status, o.Channel, o.BranchId, o.Notes, o.GrandTotal, o.PaidAmount,
-                OrderDate = DateTime.SpecifyKind(o.OrderDate, DateTimeKind.Utc), TakenByUserId = o.SalesRepUserId,
+                o.OrderDate, TakenByUserId = o.SalesRepUserId,
                 Lines = lines[o.Id].OrderBy(l => l.LineNumber).Select(l => new { l.ProductId, ProductName = names.GetValueOrDefault(l.ProductId, "Item"), l.Quantity, l.UnitPrice, l.LineTotal, l.Notes }),
             }).ToList(),
             RowVersionToken.Next(versions, request.Limit, request.UpperRowVersion),

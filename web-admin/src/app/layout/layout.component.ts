@@ -8,53 +8,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { AuthService } from '../core/auth/auth.service';
-
-interface NavEntry {
-  label: string;
-  icon: string;
-  routerLink: string;
-  permission: string;
-  /** The API only accepts this permission from an all-branches role for these screens. */
-  tenantWide?: boolean;
-  feature?: string;
-}
-
-interface NavSection {
-  title: string;
-  entries: NavEntry[];
-}
-
-/** Built from the signed-in user's permissions/features (section 13). */
-const NAV_SECTIONS: NavSection[] = [
-  {
-    title: 'Organisation',
-    entries: [
-      { label: 'Users', icon: 'group', routerLink: '/setup/users', permission: 'Users.View' },
-      { label: 'Roles', icon: 'admin_panel_settings', routerLink: '/setup/roles', permission: 'Roles.Manage', tenantWide: true },
-      { label: 'Branches', icon: 'storefront', routerLink: '/setup/branches', permission: 'Branches.Manage' },
-    ],
-  },
-  {
-    title: 'Catalog',
-    entries: [
-      { label: 'Menu', icon: 'restaurant_menu', routerLink: '/catalog/menu', permission: 'Catalog.View' },
-      { label: 'Categories', icon: 'category', routerLink: '/catalog/categories', permission: 'Catalog.Manage', tenantWide: true },
-    ],
-  },
-  {
-    title: 'Configuration',
-    entries: [
-      { label: 'Feature toggles', icon: 'toggle_on', routerLink: '/setup/features', permission: 'Settings.Manage', tenantWide: true },
-      { label: 'Devices', icon: 'smartphone', routerLink: '/setup/devices', permission: 'Devices.Manage' },
-    ],
-  },
-  {
-    title: 'Platform',
-    entries: [
-      { label: 'Tenants', icon: 'domain', routerLink: '/platform/tenants', permission: 'Platform.Tenants.Manage' },
-    ],
-  },
-];
+import { NAV_SECTIONS, NavSection, visibleNavSections } from './nav';
 
 @Component({
   selector: 'app-layout',
@@ -255,16 +209,7 @@ export class LayoutComponent {
     { initialValue: this.router.url },
   );
 
-  readonly menuSections = computed<NavSection[]>(() =>
-    NAV_SECTIONS.map((section) => ({
-      ...section,
-      entries: section.entries.filter(
-        (entry) =>
-          (entry.tenantWide ? this.auth.hasTenantWidePermission(entry.permission) : this.auth.hasPermission(entry.permission)) &&
-          (!entry.feature || this.auth.hasFeature(entry.feature)),
-      ),
-    })).filter((section) => section.entries.length > 0),
-  );
+  readonly menuSections = computed<NavSection[]>(() => visibleNavSections(this.auth));
 
   private readonly currentEntry = computed(() => {
     const url = this.url();
