@@ -44,8 +44,10 @@ if (-not $existingService) {
     # BinaryPathName can change between versions of .NET/publish settings -- keep it in sync.
     sc.exe config $ServiceName binPath= "`"$exePath`"" | Out-Null
     # Defensive: don't let sc.exe's exit code become this script's own exit code (see the
-    # robocopy/$LASTEXITCODE note in Common.ps1's Sync-Files -- same class of bug).
-    $LASTEXITCODE = 0
+    # robocopy/$LASTEXITCODE note in Common.ps1's Sync-Files -- same class of bug). Must
+    # be $global:LASTEXITCODE -- a plain assignment here is function-local and does not
+    # touch the real one.
+    $global:LASTEXITCODE = 0
 }
 
 Start-Service -Name $ServiceName

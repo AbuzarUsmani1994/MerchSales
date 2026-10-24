@@ -93,13 +93,21 @@ function Sync-Files {
     # powershell.exe's own process exit code mirrors it when the script ends, which
     # GitHub Actions reads as step failure even though the deploy fully succeeded
     # (discovered deploying StockOrder.Api to 116.58.33.11: "deployed and healthy"
-    # printed, then "Process completed with exit code 1" anyway). Reset it explicitly.
+    # printed, then "Process completed with exit code 1" anyway).
+    #
+    # IMPORTANT: plain `$LASTEXITCODE = 0` here only creates a function-local shadow
+    # variable (PowerShell's default assignment scoping) -- it does NOT clear the real
+    # automatic variable the engine set when robocopy ran, which lives at global scope.
+    # That shadow disappears when this function returns, leaving the real one untouched,
+    # so the bug survives even with this reset in place (found the hard way: this exact
+    # fix shipped once already and the failure was identical on the next deploy). Must
+    # use $global:LASTEXITCODE explicitly.
     if ($LASTEXITCODE -ge 8) {
         $code = $LASTEXITCODE
-        $LASTEXITCODE = 0
+        $global:LASTEXITCODE = 0
         throw "robocopy failed copying $Source -> $Destination (exit code $code)"
     }
-    $LASTEXITCODE = 0
+    $global:LASTEXITCODE = 0
 }
 
 function Wait-ForHealthy {
