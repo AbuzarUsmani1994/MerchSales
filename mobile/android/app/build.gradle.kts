@@ -47,18 +47,17 @@ android {
     }
 
     // Section 17.1: dev and prod install side by side (different application ids).
-    // dev may talk plain HTTP to a LAN server; prod is HTTPS only.
+    // dev may talk plain HTTP to a LAN server; prod is HTTPS only. Each flavor's app name is in
+    // src/<flavor>/res/values/strings.xml (AGP 9 disables resValue() by default).
     flavorDimensions += "env"
     productFlavors {
         create("dev") {
             dimension = "env"
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
-            resValue("string", "app_name", "StockOrder Dev")
         }
         create("prod") {
             dimension = "env"
-            resValue("string", "app_name", "StockOrder")
         }
     }
 
