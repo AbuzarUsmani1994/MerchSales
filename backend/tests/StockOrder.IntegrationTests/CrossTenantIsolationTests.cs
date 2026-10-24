@@ -63,6 +63,17 @@ public sealed class CrossTenantIsolationTests(DatabaseFixture fixture)
         await using var connection = new SqlConnection(fixture.AppRuntimeConnectionString);
         await connection.OpenAsync();
 
+        // sp_set_session_context with @read_only = 1 can only be set ONCE per physical
+        // session (section 6) -- set it once here, not inside InsertTenantWithBranchAsync,
+        // which is called twice on this same connection. Calling it a second time throws
+        // "The key has been set as read_only for this session." This mirrors how the real
+        // IBypassConnectionFactory sets it exactly once per newly-opened connection.
+        await using (var bypassCommand = connection.CreateCommand())
+        {
+            bypassCommand.CommandText = "EXEC sp_set_session_context @key = N'RlsBypass', @value = 1, @read_only = 1;";
+            await bypassCommand.ExecuteNonQueryAsync();
+        }
+
         var tenantA = await InsertTenantWithBranchAsync(connection);
         var tenantB = await InsertTenantWithBranchAsync(connection);
         return (tenantA, tenantB);
@@ -71,9 +82,6 @@ public sealed class CrossTenantIsolationTests(DatabaseFixture fixture)
     private static async Task<Guid> InsertTenantWithBranchAsync(SqlConnection connection)
     {
         var tenantId = Guid.NewGuid();
-        await using var bypassCommand = connection.CreateCommand();
-        bypassCommand.CommandText = "EXEC sp_set_session_context @key = N'RlsBypass', @value = 1, @read_only = 1;";
-        await bypassCommand.ExecuteNonQueryAsync();
 
         await using var insertTenant = connection.CreateCommand();
         insertTenant.CommandText = """
