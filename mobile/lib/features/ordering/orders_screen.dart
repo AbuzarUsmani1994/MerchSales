@@ -62,7 +62,7 @@ class _OrderCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final lines = (jsonDecode(order.linesJson) as List).cast<Map<String, dynamic>>();
     final (label, color, soft) = switch (order.status) {
-      LocalOrderStatus.sending => (l10n.statusSending, AppColors.textMuted, AppColors.background),
+      LocalOrderStatus.sending => (l10n.statusSending, AppColors.textMuted, context.palette.background),
       LocalOrderStatus.rejected => (l10n.statusRejected, AppColors.danger, AppColors.dangerSoft),
       'Closed' || 'Paid' => (l10n.statusPaid, AppColors.success, AppColors.successSoft),
       'Cancelled' => (l10n.statusCancelled, AppColors.danger, AppColors.dangerSoft),

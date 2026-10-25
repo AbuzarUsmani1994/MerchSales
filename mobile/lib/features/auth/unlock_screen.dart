@@ -43,7 +43,7 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
             const Spacer(),
             const BrandMark(size: 64),
             const SizedBox(height: 24),
-            Text(l10n.unlockTitle, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.navy)),
+            Text(l10n.unlockTitle, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: context.palette.ink)),
             const SizedBox(height: 6),
             Text(name, style: const TextStyle(color: AppColors.textMuted)),
             const Spacer(),

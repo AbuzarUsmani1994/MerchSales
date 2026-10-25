@@ -68,6 +68,7 @@ class SyncEngine {
         return SyncUpdateRequired(storeUrl: status.storeUrl);
       }
       await _db.writeMeta(SyncMetaKeys.maxOfflineHours, '${status.maxOfflineHours}');
+      if (status.industry != null) await _db.writeMeta(SyncMetaKeys.industry, status.industry);
 
       final (pushed, rejected) = await _push();
       await _pull();

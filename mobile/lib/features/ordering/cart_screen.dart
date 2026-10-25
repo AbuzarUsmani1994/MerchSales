@@ -62,7 +62,7 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                         Expanded(child: Text(line.item.name, style: const TextStyle(fontWeight: FontWeight.w600))),
                         IconButton(onPressed: () => controller.remove(line.item), icon: const Icon(Icons.remove_circle_outline)),
                         Text('${line.quantity}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-                        IconButton(onPressed: () => controller.add(line.item), icon: const Icon(Icons.add_circle, color: AppColors.accent)),
+                        IconButton(onPressed: () => controller.add(line.item), icon: Icon(Icons.add_circle, color: context.palette.primary)),
                       ]),
                       Row(children: [
                         Expanded(

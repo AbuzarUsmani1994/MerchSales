@@ -90,7 +90,7 @@ class _CommandTile extends StatelessWidget {
         padding: const EdgeInsets.only(bottom: 8),
         child: Card(
           child: ListTile(
-            leading: Icon(isError ? Icons.error_outline : Icons.schedule, color: isError ? AppColors.danger : AppColors.accent),
+            leading: Icon(isError ? Icons.error_outline : Icons.schedule, color: isError ? AppColors.danger : context.palette.primary),
             title: Text(command.type, style: const TextStyle(fontWeight: FontWeight.w600)),
             subtitle: Text(subtitle),
             trailing: trailing,

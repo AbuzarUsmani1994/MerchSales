@@ -14,6 +14,7 @@ import 'package:stockorder_mobile/features/ordering/cart_screen.dart';
 import 'package:stockorder_mobile/features/ordering/menu_screen.dart';
 import 'package:stockorder_mobile/features/ordering/orders_screen.dart';
 import 'package:stockorder_mobile/l10n/generated/app_localizations.dart';
+import 'package:stockorder_mobile/shared/theme.dart';
 
 /// Section 19 (Flutter): widget test for taking a sales order.
 void main() {
@@ -54,7 +55,7 @@ void main() {
 
   tearDown(() => db.close());
 
-  Widget app() {
+  Widget app({AppIndustry industry = AppIndustry.standard}) {
     // Same nesting as the app's router: the work screens sit under Home.
     final router = GoRouter(initialLocation: '/order', routes: [
       GoRoute(path: '/', builder: (context, state) => const Scaffold(body: Text('HOME')), routes: [
@@ -72,6 +73,7 @@ void main() {
         sessionControllerProvider.overrideWith(_SignedInSession.new),
       ],
       child: MaterialApp.router(
+        theme: buildAppTheme(industry),
         routerConfig: router,
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -137,6 +139,24 @@ void main() {
     await tester.tap(find.byType(BackButton));
     await settle(tester);
     expect(find.text('HOME'), findsOneWidget, reason: 'back from the menu returns home');
+    await unmount(tester);
+  });
+
+  testWidgets('a restaurant browses a picture grid; pharma keeps the compact list', (tester) async {
+    await real(tester, () => db.writeMeta(SyncMetaKeys.lastSuccessfulSyncAtUtc, DateTime.now().toUtc().toIso8601String()));
+
+    await tester.pumpWidget(app(industry: AppIndustry.restaurant));
+    await settle(tester);
+    expect(find.byKey(const Key('card-tikka')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('add-tikka')));
+    await settle(tester);
+    expect(find.text('1 item'), findsOneWidget, reason: 'adding from a grid card works like the list');
+    await unmount(tester);
+
+    await tester.pumpWidget(app(industry: AppIndustry.pharma));
+    await settle(tester);
+    expect(find.byKey(const Key('card-tikka')), findsNothing);
+    expect(find.byType(ListTile), findsWidgets);
     await unmount(tester);
   });
 

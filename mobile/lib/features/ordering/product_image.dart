@@ -12,12 +12,22 @@ final _pictureProvider = FutureProvider.family<File?, ({String productId, String
 /// A menu item's picture, or a coloured tile with its initial when it has none (or it isn't
 /// on the phone yet and there's no connection). Same colours as the back office.
 class ProductImage extends ConsumerWidget {
-  const ProductImage({super.key, required this.productId, required this.attachmentId, required this.name, this.size = 56});
+  const ProductImage({
+    super.key,
+    required this.productId,
+    required this.attachmentId,
+    required this.name,
+    this.size = 56,
+    this.square = true,
+  });
 
   final String productId;
   final String? attachmentId;
   final String name;
   final double size;
+
+  /// False fills the space it's given (a grid card's picture area) instead of a size x size square.
+  final bool square;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -25,20 +35,21 @@ class ProductImage extends ConsumerWidget {
     final file = id == null ? null : ref.watch(_pictureProvider((productId: productId, attachmentId: id))).value;
     final placeholder = _Placeholder(name: name, size: size);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(size * 0.18),
-      child: SizedBox.square(
-        dimension: size,
-        child: file == null
-            ? placeholder
-            : Image.file(
-                file,
-                fit: BoxFit.cover,
-                cacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).round(),
-                errorBuilder: (context, error, stack) => placeholder,
-              ),
-      ),
-    );
+    final picture = file == null
+        ? placeholder
+        : Image.file(
+            file,
+            fit: BoxFit.cover,
+            cacheWidth: (size * MediaQuery.devicePixelRatioOf(context)).round(),
+            errorBuilder: (context, error, stack) => placeholder,
+          );
+
+    return square
+        ? ClipRRect(
+            borderRadius: BorderRadius.circular(size * 0.18),
+            child: SizedBox.square(dimension: size, child: picture),
+          )
+        : SizedBox.expand(child: picture);
   }
 }
 

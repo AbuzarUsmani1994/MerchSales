@@ -58,6 +58,7 @@ class AuthRepository {
       tenantCode: data['tenantCode'] as String,
       tenantName: data['tenantName'] as String,
       mustChangePassword: data['mustChangePassword'] as bool,
+      industry: data['tenantIndustry'] as String?,
     );
     await _tokenStorage.saveProfile(profile);
     return profile;

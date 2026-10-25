@@ -96,10 +96,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       Row(children: [
                         const BrandMark(size: 40),
                         const SizedBox(width: 12),
-                        Text(l10n.appTitle, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: AppColors.navy)),
+                        Text(l10n.appTitle, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: context.palette.ink)),
                       ]),
                       const SizedBox(height: 40),
-                      Text(l10n.loginTitle, style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w700, color: AppColors.navy)),
+                      Text(l10n.loginTitle, style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700, color: context.palette.ink)),
                       const SizedBox(height: 6),
                       Text(l10n.loginSubtitle, style: const TextStyle(color: AppColors.textMuted, fontSize: 15)),
                       const SizedBox(height: 28),

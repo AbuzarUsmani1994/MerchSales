@@ -29,6 +29,7 @@ class SyncStatus {
     required this.deviceRevoked,
     required this.wipeRequested,
     required this.maxOfflineHours,
+    this.industry,
     required this.serverTimeUtc,
   });
 
@@ -37,6 +38,9 @@ class SyncStatus {
   final bool deviceRevoked;
   final bool wipeRequested;
   final int maxOfflineHours;
+
+  /// The company's industry template (the app's theme); null from servers before it was added.
+  final String? industry;
   final DateTime serverTimeUtc;
 
   factory SyncStatus.fromJson(Map<String, dynamic> json) => SyncStatus(
@@ -45,6 +49,7 @@ class SyncStatus {
         deviceRevoked: json['deviceRevoked'] as bool,
         wipeRequested: json['wipeRequested'] as bool,
         maxOfflineHours: json['maxOfflineHours'] as int,
+        industry: json['industry'] as String?,
         serverTimeUtc: DateTime.parse(json['serverTimeUtc'] as String),
       );
 }

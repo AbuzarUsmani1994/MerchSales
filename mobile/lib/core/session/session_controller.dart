@@ -90,6 +90,8 @@ class SessionController extends Notifier<SessionState> {
           totpCode: totpCode,
         );
 
+    await ref.read(industryProvider.notifier).set(profile.industry);
+
     final db = ref.read(databaseProvider);
     if (await db.readMeta(SyncMetaKeys.ownerUserId) != profile.userId) {
       await db.clearForNewUser(profile.userId);
@@ -217,6 +219,7 @@ class SyncController extends Notifier<SyncUiState> {
     state = SyncUiState(lastResult: result);
     await ref.read(sessionControllerProvider.notifier).onSyncResult(result);
     if (result is SyncSucceeded) {
+      await ref.read(industryProvider.notifier).set(await ref.read(databaseProvider).readMeta(SyncMetaKeys.industry));
       // Pictures after the data: the menu is usable at once and they fill in as they arrive.
       unawaited(ref.read(databaseProvider).productImages().then(ref.read(productImageCacheProvider).syncWith));
     }

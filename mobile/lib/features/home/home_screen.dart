@@ -57,11 +57,15 @@ class HomeScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
           children: [
-            Text(l10n.homeGreeting(profile?.displayName ?? ''),
-                style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700, color: AppColors.navy)),
-            const SizedBox(height: 4),
-            Text('${profile?.username ?? ''} · ${profile?.tenantCode ?? ''}', style: const TextStyle(color: AppColors.textMuted)),
-            const SizedBox(height: 20),
+            _HeroBanner(
+              greeting: l10n.homeGreeting(profile?.displayName ?? ''),
+              company: profile?.tenantName ?? '',
+              detail: [
+                if (ref.watch(orderBranchProvider)?.name case final branch?) branch,
+                '${profile?.username ?? ''} · ${profile?.tenantCode ?? ''}',
+              ].join('  ·  '),
+            ),
+            const SizedBox(height: 16),
             const _OfflineBanner(),
             const _OrderingCard(),
             const _SyncCard(),
@@ -83,8 +87,7 @@ class HomeScreen extends ConsumerWidget {
     ref.invalidate(_biometricOfferProvider);
     if (context.mounted) {
       final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(!enabled ? l10n.biometricTurnedOn : l10n.biometricTurnedOff)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(!enabled ? l10n.biometricTurnedOn : l10n.biometricTurnedOff)));
     }
   }
 
@@ -114,6 +117,57 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
+/// The top of home: the company in its industry's colours (warm for restaurants, clinical for pharma).
+class _HeroBanner extends StatelessWidget {
+  const _HeroBanner({required this.greeting, required this.company, required this.detail});
+
+  final String greeting;
+  final String company;
+  final String detail;
+
+  @override
+  Widget build(BuildContext context) {
+    final palette = context.palette;
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(22),
+        gradient: LinearGradient(colors: palette.hero, begin: Alignment.topLeft, end: Alignment.bottomRight),
+        boxShadow: [BoxShadow(color: palette.primary.withValues(alpha: 0.30), blurRadius: 24, offset: const Offset(0, 10))],
+      ),
+      child: Stack(
+        children: [
+          Positioned(right: -18, bottom: -26, child: Icon(palette.icon, size: 150, color: Colors.white.withValues(alpha: 0.14))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  company.toUpperCase(),
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.85),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  greeting,
+                  style: const TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                Text(detail, style: TextStyle(color: Colors.white.withValues(alpha: 0.85))),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 /// Taking orders, for users with Sales.Order.Create at a branch (the menu comes from sync).
 class _OrderingCard extends ConsumerWidget {
   const _OrderingCard();
@@ -124,34 +178,42 @@ class _OrderingCard extends ConsumerWidget {
     if ((ref.watch(orderBranchesProvider).value ?? const []).isEmpty) return const SizedBox.shrink();
 
     Widget action(Key key, IconData icon, String title, String subtitle, String route, {bool primary = false}) => Expanded(
-          child: Material(
-            color: primary ? AppColors.accent : Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            child: InkWell(
-              key: key,
-              borderRadius: BorderRadius.circular(16),
-              onTap: () => context.push(route),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Icon(icon, color: primary ? Colors.white : AppColors.accent, size: 28),
-                  const SizedBox(height: 10),
-                  Text(title, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: primary ? Colors.white : AppColors.navy)),
-                  const SizedBox(height: 2),
-                  Text(subtitle, style: TextStyle(fontSize: 12, color: primary ? Colors.white70 : AppColors.textMuted)),
-                ]),
-              ),
+      child: Material(
+        color: primary ? context.palette.primary : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          key: key,
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => context.push(route),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(icon, color: primary ? Colors.white : context.palette.primary, size: 28),
+                const SizedBox(height: 10),
+                Text(
+                  title,
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: primary ? Colors.white : context.palette.ink),
+                ),
+                const SizedBox(height: 2),
+                Text(subtitle, style: TextStyle(fontSize: 12, color: primary ? Colors.white70 : AppColors.textMuted)),
+              ],
             ),
           ),
-        );
+        ),
+      ),
+    );
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Row(children: [
-        action(const Key('home-new-order'), Icons.add_shopping_cart, l10n.newOrder, l10n.newOrderHint, '/order', primary: true),
-        const SizedBox(width: 12),
-        action(const Key('home-orders'), Icons.receipt_long_outlined, l10n.ordersTitle, l10n.ordersHint, '/orders'),
-      ]),
+      child: Row(
+        children: [
+          action(const Key('home-new-order'), Icons.add_shopping_cart, l10n.newOrder, l10n.newOrderHint, '/order', primary: true),
+          const SizedBox(width: 12),
+          action(const Key('home-orders'), Icons.receipt_long_outlined, l10n.ordersTitle, l10n.ordersHint, '/orders'),
+        ],
+      ),
     );
   }
 }
@@ -177,17 +239,26 @@ class _OfflineBanner extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(color: AppColors.warningSoft, borderRadius: BorderRadius.circular(16)),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Icon(Icons.cloud_off_outlined, color: AppColors.warning),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(l10n.offlineBlockedTitle, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.warning)),
-              const SizedBox(height: 4),
-              Text(l10n.offlineBlockedBody(hours), style: const TextStyle(color: AppColors.warning)),
-            ]),
-          ),
-        ]),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.cloud_off_outlined, color: AppColors.warning),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.offlineBlockedTitle,
+                    style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.warning),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(l10n.offlineBlockedBody(hours), style: const TextStyle(color: AppColors.warning)),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -208,42 +279,54 @@ class _SyncCard extends ConsumerWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(
-                color: healthy ? AppColors.successSoft : AppColors.accentSoft,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(healthy ? Icons.cloud_done_outlined : Icons.cloud_sync_outlined,
-                  color: healthy ? AppColors.success : AppColors.accent),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: healthy ? AppColors.successSoft : context.palette.primarySoft,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    healthy ? Icons.cloud_done_outlined : Icons.cloud_sync_outlined,
+                    color: healthy ? AppColors.success : context.palette.primary,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.syncCardTitle, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                      Text(
+                        last == null ? l10n.neverSynced : l10n.lastSynced(relativeTime(l10n, last)),
+                        style: const TextStyle(color: AppColors.textMuted),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text(l10n.syncCardTitle, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-                Text(last == null ? l10n.neverSynced : l10n.lastSynced(relativeTime(l10n, last)),
-                    style: const TextStyle(color: AppColors.textMuted)),
-              ]),
+            const SizedBox(height: 12),
+            Text(l10n.pendingChanges(pending)),
+            if (error != null && sync.lastResult is! SyncSucceeded) ...[
+              const SizedBox(height: 6),
+              Text(l10n.syncFailed(error), style: const TextStyle(color: AppColors.danger)),
+            ],
+            const SizedBox(height: 14),
+            OutlinedButton.icon(
+              onPressed: sync.running ? null : () => ref.read(syncControllerProvider.notifier).syncNow(),
+              icon: sync.running
+                  ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.sync),
+              label: Text(sync.running ? l10n.syncing : l10n.syncNow),
             ),
-          ]),
-          const SizedBox(height: 12),
-          Text(l10n.pendingChanges(pending)),
-          if (error != null && sync.lastResult is! SyncSucceeded) ...[
-            const SizedBox(height: 6),
-            Text(l10n.syncFailed(error), style: const TextStyle(color: AppColors.danger)),
           ],
-          const SizedBox(height: 14),
-          OutlinedButton.icon(
-            onPressed: sync.running ? null : () => ref.read(syncControllerProvider.notifier).syncNow(),
-            icon: sync.running
-                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.sync),
-            label: Text(sync.running ? l10n.syncing : l10n.syncNow),
-          ),
-        ]),
+        ),
       ),
     );
   }
@@ -265,28 +348,36 @@ class _BiometricOffer extends ConsumerWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Card(
-        color: AppColors.accentSoft,
+        color: context.palette.primarySoft,
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Row(children: [
-              const Icon(Icons.fingerprint, color: AppColors.accent),
-              const SizedBox(width: 10),
-              Text(l10n.biometricOfferTitle, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-            ]),
-            const SizedBox(height: 6),
-            Text(l10n.biometricOfferBody),
-            const SizedBox(height: 12),
-            Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-              TextButton(onPressed: () => choose(false), child: Text(l10n.notNow)),
-              const SizedBox(width: 8),
-              FilledButton(
-                style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
-                onPressed: () => choose(true),
-                child: Text(l10n.enable),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.fingerprint, color: context.palette.primary),
+                  const SizedBox(width: 10),
+                  Text(l10n.biometricOfferTitle, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                ],
               ),
-            ]),
-          ]),
+              const SizedBox(height: 6),
+              Text(l10n.biometricOfferBody),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(onPressed: () => choose(false), child: Text(l10n.notNow)),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
+                    onPressed: () => choose(true),
+                    child: Text(l10n.enable),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -301,11 +392,7 @@ class _AccessCard extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final permissions = ref.watch(_permissionCountProvider).value ?? 0;
     final features = ref.watch(_featureCountProvider).value ?? 0;
-    return _InfoCard(
-      icon: Icons.verified_user_outlined,
-      title: l10n.accessCardTitle,
-      body: l10n.accessSummary(permissions, features),
-    );
+    return _InfoCard(icon: Icons.verified_user_outlined, title: l10n.accessCardTitle, body: l10n.accessSummary(permissions, features));
   }
 }
 
@@ -321,22 +408,28 @@ class _InfoCard extends StatelessWidget {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(color: AppColors.background, borderRadius: BorderRadius.circular(12)),
-            child: Icon(icon, color: AppColors.textMuted),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-              const SizedBox(height: 4),
-              Text(body, style: const TextStyle(color: AppColors.textMuted)),
-            ]),
-          ),
-        ]),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(color: context.palette.background, borderRadius: BorderRadius.circular(12)),
+              child: Icon(icon, color: AppColors.textMuted),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                  const SizedBox(height: 4),
+                  Text(body, style: const TextStyle(color: AppColors.textMuted)),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../shared/theme.dart';
 import 'api/api_client.dart';
 import 'auth/auth_repository.dart';
 import 'auth/biometric_service.dart';
@@ -63,6 +64,23 @@ final syncEngineProvider = Provider<SyncEngine>((ref) {
     appVersion: AppConfig.appVersion,
   );
 });
+
+/// The industry read from secure storage at start-up (main), before the first frame.
+final initialIndustryProvider = Provider<AppIndustry>((ref) => AppIndustry.standard);
+
+/// The company's industry: the app's theme. Set at sign-in and refreshed by every sync.
+final industryProvider = NotifierProvider<IndustryController, AppIndustry>(IndustryController.new);
+
+class IndustryController extends Notifier<AppIndustry> {
+  @override
+  AppIndustry build() => ref.read(initialIndustryProvider);
+
+  Future<void> set(String? serverIndustry) async {
+    if (serverIndustry == null) return;
+    state = AppIndustry.fromServer(serverIndustry);
+    await ref.read(tokenStorageProvider).saveIndustry(serverIndustry);
+  }
+}
 
 final sessionControllerProvider = NotifierProvider<SessionController, SessionState>(SessionController.new);
 

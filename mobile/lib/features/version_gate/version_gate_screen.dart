@@ -25,10 +25,10 @@ class VersionGateScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(24),
             child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
               const Spacer(),
-              const Icon(Icons.system_update, size: 56, color: AppColors.accent),
+              Icon(Icons.system_update, size: 56, color: context.palette.primary),
               const SizedBox(height: 20),
               Text(l10n.updateTitle,
-                  textAlign: TextAlign.center, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: AppColors.navy)),
+                  textAlign: TextAlign.center, style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700, color: context.palette.ink)),
               const SizedBox(height: 8),
               Text(l10n.updateBody, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textMuted)),
               const SizedBox(height: 24),

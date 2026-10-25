@@ -16,6 +16,7 @@ class TokenStorage {
   static const _databaseKeyKey = 'stockorder.databaseKey';
   static const _profileKey = 'stockorder.profile';
   static const _biometricKey = 'stockorder.biometric';
+  static const _industryKey = 'stockorder.industry';
 
   Future<String?> readAccessToken() => _storage.read(key: _accessTokenKey);
   Future<String?> readRefreshToken() => _storage.read(key: _refreshTokenKey);
@@ -59,6 +60,12 @@ class TokenStorage {
 
   Future<void> saveBiometricChoice(bool enabled) => _storage.write(key: _biometricKey, value: '$enabled');
 
+  /// The last company's industry ("Restaurant", "Pharma"): the app's theme, kept across sign-outs
+  /// so the sign-in screen already looks like the company's app.
+  Future<String?> readIndustry() => _storage.read(key: _industryKey);
+
+  Future<void> saveIndustry(String industry) => _storage.write(key: _industryKey, value: industry);
+
   /// Signs out: tokens and the "must change password" state go; the device id, database key,
   /// last profile (to detect a different user next time) and biometric choice stay.
   Future<void> clearSession() async {
@@ -77,6 +84,7 @@ class UserProfile {
     required this.tenantCode,
     required this.tenantName,
     required this.mustChangePassword,
+    this.industry,
   });
 
   final String userId;
@@ -87,6 +95,9 @@ class UserProfile {
   final String tenantName;
   final bool mustChangePassword;
 
+  /// The company's industry template; null in profiles saved before it was added.
+  final String? industry;
+
   UserProfile copyWith({bool? mustChangePassword}) => UserProfile(
         userId: userId,
         username: username,
@@ -95,6 +106,7 @@ class UserProfile {
         tenantCode: tenantCode,
         tenantName: tenantName,
         mustChangePassword: mustChangePassword ?? this.mustChangePassword,
+        industry: industry,
       );
 
   factory UserProfile.fromJson(Map<String, dynamic> json) => UserProfile(
@@ -105,6 +117,7 @@ class UserProfile {
         tenantCode: json['tenantCode'] as String,
         tenantName: json['tenantName'] as String,
         mustChangePassword: json['mustChangePassword'] as bool,
+        industry: json['industry'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -115,5 +128,6 @@ class UserProfile {
         'tenantCode': tenantCode,
         'tenantName': tenantName,
         'mustChangePassword': mustChangePassword,
+        'industry': industry,
       };
 }

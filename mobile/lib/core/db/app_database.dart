@@ -249,6 +249,7 @@ abstract final class SyncMetaKeys {
   static const nextClientSequence = 'nextClientSequence';
   static const ownerUserId = 'ownerUserId';
   static const orderBranchId = 'orderBranchId';
+  static const industry = 'industry';
 }
 
 @DriftDatabase(tables: [

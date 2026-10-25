@@ -35,6 +35,9 @@ String? _redirectFor(SessionStatus status, String location) {
   return gates.contains(location) ? '/' : null;
 }
 
+/// Every screen sits on the industry background (screens' own Scaffolds are transparent).
+Page<void> _page(GoRouterState state, Widget screen) => MaterialPage<void>(key: state.pageKey, child: AppBackground(child: screen));
+
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = ValueNotifier<SessionStatus>(ref.read(sessionControllerProvider).status);
   ref.listen(sessionControllerProvider, (_, next) => refresh.value = next.status);
@@ -45,24 +48,24 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: refresh,
     redirect: (context, state) => _redirectFor(ref.read(sessionControllerProvider).status, state.matchedLocation),
     routes: [
-      GoRoute(path: '/starting', builder: (context, state) => const _StartingScreen()),
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-      GoRoute(path: '/unlock', builder: (context, state) => const UnlockScreen()),
-      GoRoute(path: '/change-password', builder: (context, state) => const ChangePasswordScreen()),
-      GoRoute(path: '/update', builder: (context, state) => const VersionGateScreen()),
+      GoRoute(path: '/starting', pageBuilder: (context, state) => _page(state, const _StartingScreen())),
+      GoRoute(path: '/login', pageBuilder: (context, state) => _page(state, const LoginScreen())),
+      GoRoute(path: '/unlock', pageBuilder: (context, state) => _page(state, const UnlockScreen())),
+      GoRoute(path: '/change-password', pageBuilder: (context, state) => _page(state, const ChangePasswordScreen())),
+      GoRoute(path: '/update', pageBuilder: (context, state) => _page(state, const VersionGateScreen())),
       // Work screens sit under Home, so going straight to one (e.g. Orders after sending an
       // order) still leaves Home underneath: a back arrow, and Android back returns home.
       GoRoute(
         path: '/',
-        builder: (context, state) => const HomeScreen(),
+        pageBuilder: (context, state) => _page(state, const HomeScreen()),
         routes: [
-          GoRoute(path: 'sync', builder: (context, state) => const SyncStatusScreen()),
+          GoRoute(path: 'sync', pageBuilder: (context, state) => _page(state, const SyncStatusScreen())),
           GoRoute(
             path: 'order',
-            builder: (context, state) => const MenuScreen(),
-            routes: [GoRoute(path: 'cart', builder: (context, state) => const CartScreen())],
+            pageBuilder: (context, state) => _page(state, const MenuScreen()),
+            routes: [GoRoute(path: 'cart', pageBuilder: (context, state) => _page(state, const CartScreen()))],
           ),
-          GoRoute(path: 'orders', builder: (context, state) => const OrdersScreen()),
+          GoRoute(path: 'orders', pageBuilder: (context, state) => _page(state, const OrdersScreen())),
         ],
       ),
     ],
@@ -76,7 +79,7 @@ class StockOrderApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
-      theme: buildAppTheme(),
+      theme: buildAppTheme(ref.watch(industryProvider)),
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
