@@ -77,6 +77,9 @@ public sealed class Product : AuditedTenantEntity
     public bool IsActive { get; private set; } = true;
     public Guid? OwnerBranchId { get; private set; }
 
+    /// <summary>The product's picture (platform.Attachment); null shows a placeholder.</summary>
+    public Guid? ImageAttachmentId { get; private set; }
+
     private Product()
     {
     }
@@ -113,6 +116,13 @@ public sealed class Product : AuditedTenantEntity
         Description = description;
         CategoryId = categoryId;
         IsActive = isActive;
+        MarkUpdated(nowUtc, updatedBy);
+    }
+
+    /// <summary>Changing the picture changes the row (and its RowVer), so phones pull the new one.</summary>
+    public void SetImage(Guid? attachmentId, DateTime nowUtc, Guid? updatedBy)
+    {
+        ImageAttachmentId = attachmentId;
         MarkUpdated(nowUtc, updatedBy);
     }
 }

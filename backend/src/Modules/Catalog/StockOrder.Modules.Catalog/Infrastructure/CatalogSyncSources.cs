@@ -60,7 +60,7 @@ internal sealed class ProductsSyncSource(IUnitOfWork unitOfWork, ICurrentUserCon
         await CatalogSyncSql.AddBranchScopeAsync(parameters, accessScope, ct);
         var rows = await CatalogSyncSql.QueryAsync<ProductRow>(unitOfWork, """
             SELECT TOP (@limit) p.Id, p.Sku, p.Name, p.ShortName, p.Description, p.CategoryId, p.ProductTypeId,
-                   t.Behaviour, p.BaseUomId, p.SalesUomId, p.OwnerBranchId, p.IsActive, p.RowVer
+                   t.Behaviour, p.BaseUomId, p.SalesUomId, p.OwnerBranchId, p.ImageAttachmentId, p.IsActive, p.RowVer
             FROM catalog.Product p
             JOIN catalog.ProductType t ON t.TenantId = p.TenantId AND t.Id = p.ProductTypeId
             WHERE p.TenantId = @tenantId AND p.RowVer > @after AND p.RowVer < @upper
@@ -71,13 +71,13 @@ internal sealed class ProductsSyncSource(IUnitOfWork unitOfWork, ICurrentUserCon
         return CatalogSyncSql.Page(rows, r => r.RowVer, r => new
         {
             r.Id, r.Sku, r.Name, r.ShortName, r.Description, r.CategoryId, r.ProductTypeId, r.Behaviour,
-            r.BaseUomId, r.SalesUomId, r.OwnerBranchId, r.IsActive,
+            r.BaseUomId, r.SalesUomId, r.OwnerBranchId, r.ImageAttachmentId, r.IsActive,
         }, request);
     }
 
     private sealed record ProductRow(
         Guid Id, string Sku, string Name, string? ShortName, string? Description, Guid? CategoryId, Guid ProductTypeId,
-        string Behaviour, Guid BaseUomId, Guid? SalesUomId, Guid? OwnerBranchId, bool IsActive, byte[] RowVer);
+        string Behaviour, Guid BaseUomId, Guid? SalesUomId, Guid? OwnerBranchId, Guid? ImageAttachmentId, bool IsActive, byte[] RowVer);
 }
 
 internal sealed class PriceListsSyncSource(IUnitOfWork unitOfWork, ICurrentUserContext currentUser, IAccessScope accessScope) : ISyncSource

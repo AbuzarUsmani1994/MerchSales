@@ -1,8 +1,11 @@
 using Mediator;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using StockOrder.Infrastructure.Api;
 using StockOrder.Modules.Catalog.Application;
+using StockOrder.SharedKernel.Errors;
+using StockOrder.SharedKernel.Results;
 
 namespace StockOrder.Modules.Catalog.Api;
 
@@ -57,6 +60,50 @@ public sealed class CatalogController(IMediator mediator) : ControllerBase
         (await mediator.Send(command, ct)).ToActionResult();
 
     public sealed record UpdateCategoryRequest(string Name, int SortOrder, bool IsActive);
+
+    /// <summary>Upload or replace an item's picture (multipart form, field "file").</summary>
+    [HttpPut("products/{productId:guid}/image")]
+    [Authorize(Policy = "Catalog.Manage")]
+    [BranchScoped]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(ProductImageRules.MaxBytes + 64 * 1024)]
+    public async Task<IActionResult> SetProductImage(Guid productId, IFormFile? file, CancellationToken ct)
+    {
+        if (file is null)
+        {
+            return Result.Failure(Error.Validation("Choose a picture to upload.")).ToActionResult();
+        }
+
+        using var buffer = new MemoryStream();
+        await file.CopyToAsync(buffer, ct);
+        return (await mediator.Send(new SetProductImageCommand(productId, file.FileName, buffer.ToArray()), ct)).ToActionResult();
+    }
+
+    [HttpDelete("products/{productId:guid}/image")]
+    [Authorize(Policy = "Catalog.Manage")]
+    [BranchScoped]
+    public async Task<IActionResult> RemoveProductImage(Guid productId, CancellationToken ct) =>
+        (await mediator.Send(new RemoveProductImageCommand(productId), ct)).ToActionResult();
+
+    /// <summary>
+    /// The picture itself. Callers add ?v={imageAttachmentId}: a new picture gets a new URL, so
+    /// browsers and phones may keep each one for good.
+    /// </summary>
+    [HttpGet("products/{productId:guid}/image")]
+    [Authorize(Policy = "Catalog.View")]
+    [BranchScoped]
+    public async Task<IActionResult> GetProductImage(Guid productId, CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetProductImageQuery(productId), ct);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        Response.Headers.CacheControl = "private, max-age=31536000, immutable";
+        Response.Headers.ETag = $"\"{result.Value.AttachmentId:N}\"";
+        return File(result.Value.Content, result.Value.ContentType);
+    }
 
     [HttpPut("categories/{categoryId:guid}")]
     [Authorize(Policy = "Catalog.Manage")]

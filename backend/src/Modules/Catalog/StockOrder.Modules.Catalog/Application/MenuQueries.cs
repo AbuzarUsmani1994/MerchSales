@@ -58,7 +58,8 @@ public sealed record MenuItem(
     decimal? Price,
     bool IsAvailable,
     bool CanEdit,
-    bool CanSetBranchPricing);
+    bool CanSetBranchPricing,
+    Guid? ImageAttachmentId);
 
 /// <param name="BranchId">Show prices and availability as at this branch; null = the shared menu only.</param>
 public sealed record GetMenuQuery(Guid? BranchId, string? Search, Guid? CategoryId) : IQuery<Result<IReadOnlyList<MenuItem>>>;
@@ -137,7 +138,8 @@ public sealed class GetMenuQueryHandler(CatalogDbContext db, ICurrentUserContext
                 basePrice, branchPrice, branchPrice ?? basePrice,
                 IsAvailable: !availability.TryGetValue(p.Id, out var available) || available,
                 CanEdit: CatalogPolicy.CanManageItem(grants, p.OwnerBranchId) is null,
-                CanSetBranchPricing: query.BranchId is { } b && CatalogPolicy.CanSetBranchPricing(grants, p.OwnerBranchId, b) is null);
+                CanSetBranchPricing: query.BranchId is { } b && CatalogPolicy.CanSetBranchPricing(grants, p.OwnerBranchId, b) is null,
+                ImageAttachmentId: p.ImageAttachmentId);
         }).ToList();
 
         return Result.Success<IReadOnlyList<MenuItem>>(items);

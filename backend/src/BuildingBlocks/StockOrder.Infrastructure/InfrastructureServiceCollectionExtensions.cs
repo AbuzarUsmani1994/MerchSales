@@ -53,6 +53,7 @@ public static class InfrastructureServiceCollectionExtensions
         services.AddScoped<ITenantProvisioningConnection, TenantProvisioningConnection>();
 
         services.AddSingleton<IFileStore, NtfsFileStore>();
+        services.AddScoped<IAttachmentStore, AttachmentStore>();
 
         services.Configure<SigningCertificateOptions>(configuration.GetSection(SigningCertificateOptions.SectionName));
         services.AddSingleton<ISigningCertificateProvider, SigningCertificateProvider>();
