@@ -31,6 +31,7 @@ $ErrorActionPreference = "Stop"
 . "$PSScriptRoot\Common.ps1"
 
 Write-Host "=== Deploying StockOrder.Api ==="
+$deployStarted = Get-Date
 
 if (-not (Test-Path $SourcePath)) {
     throw "SourcePath '$SourcePath' does not exist."
@@ -47,6 +48,11 @@ Sync-Files -Source $SourcePath -Destination $PhysicalPath -ExcludeDirs @("logs")
 Ensure-Site -Name $SiteName -PhysicalPath $PhysicalPath -AppPoolName $AppPoolName -Port $Port
 Start-SiteAndPool -SiteName $SiteName -AppPoolName $AppPoolName
 
-Wait-ForHealthy -Url $HealthCheckUrl -TimeoutSeconds 90
+try {
+    Wait-ForHealthy -Url $HealthCheckUrl -TimeoutSeconds 90
+} catch {
+    Write-StartupDiagnostics -PhysicalPath $PhysicalPath -Since $deployStarted
+    throw
+}
 
 Write-Host "=== StockOrder.Api deployed and healthy ==="

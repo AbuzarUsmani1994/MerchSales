@@ -131,6 +131,7 @@ function Wait-ForHealthy {
     )
 
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    $lastResult = "no response"
     while ((Get-Date) -lt $deadline) {
         try {
             $response = Invoke-WebRequest -Uri $Url -UseBasicParsing -TimeoutSec 5
@@ -138,11 +139,58 @@ function Wait-ForHealthy {
                 Write-Host "$Url is healthy."
                 return
             }
+            $lastResult = "HTTP $($response.StatusCode): $($response.Content)"
         } catch {
-            # Not up yet -- keep polling until the deadline.
+            # Not up yet -- keep polling until the deadline, but remember why, for the report.
+            $lastResult = $_.Exception.Message
+            if ($_.Exception.Response) {
+                try {
+                    $reader = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
+                    $lastResult = "HTTP $([int]$_.Exception.Response.StatusCode): $($reader.ReadToEnd())"
+                } catch { }
+            }
         }
         Start-Sleep -Seconds 2
     }
 
-    throw "$Url did not become healthy within $TimeoutSeconds seconds. Deploy failed -- check the application event log / Serilog files before retrying."
+    Write-Host "Last health check result: $lastResult"
+    throw "$Url did not become healthy within $TimeoutSeconds seconds. Deploy failed -- see the diagnostics above."
+}
+
+<#
+  Prints why an app didn't come up, into the deploy log itself, so nobody has to RDP in:
+  the newest Serilog file's tail and recent .NET / IIS errors from the Application event
+  log (a crash before Serilog starts -- bad config, missing setting -- only shows there).
+#>
+function Write-StartupDiagnostics {
+    param(
+        [Parameter(Mandatory)] [string]$PhysicalPath,
+        [Parameter(Mandatory)] [datetime]$Since
+    )
+
+    Write-Host "----- Diagnostics -----"
+    $logDir = Join-Path $PhysicalPath "logs"
+    $newest = Get-ChildItem -Path $logDir -Filter "*.log" -ErrorAction SilentlyContinue |
+        Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    if ($newest) {
+        Write-Host "Last 60 lines of $($newest.FullName):"
+        Get-Content -Path $newest.FullName -Tail 60 | ForEach-Object { Write-Host "  $_" }
+    } else {
+        Write-Host "No log files in $logDir."
+    }
+
+    Write-Host "Application event log entries since $($Since.ToString('u')):"
+    try {
+        $events = Get-WinEvent -FilterHashtable @{ LogName = 'Application'; StartTime = $Since } -MaxEvents 200 -ErrorAction Stop |
+            Where-Object { $_.ProviderName -match 'AspNetCore|\.NET Runtime|Application Error|IIS' } |
+            Select-Object -First 8
+        if (-not $events) { Write-Host "  (none)" }
+        foreach ($e in $events) {
+            Write-Host "  [$($e.TimeCreated.ToString('u'))] $($e.ProviderName) ($($e.LevelDisplayName))"
+            ($e.Message -split "`r?`n" | Select-Object -First 25) | ForEach-Object { Write-Host "    $_" }
+        }
+    } catch {
+        Write-Host "  (could not read the event log: $($_.Exception.Message))"
+    }
+    Write-Host "----- End diagnostics -----"
 }
