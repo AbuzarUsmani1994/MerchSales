@@ -7,6 +7,7 @@ import 'auth/biometric_service.dart';
 import 'auth/token_storage.dart';
 import 'config/app_config.dart';
 import 'db/app_database.dart';
+import 'images/product_image_cache.dart';
 import 'session/session_controller.dart';
 import 'sync/sync_api.dart';
 import 'sync/sync_engine.dart';
@@ -43,9 +44,13 @@ class DatabaseController extends Notifier<AppDatabase> {
     await AppDatabase.deleteDatabaseFiles();
     final storage = ref.read(tokenStorageProvider);
     await storage.deleteDatabaseKey();
+    await ref.read(productImageCacheProvider).clear();
     state = await AppDatabase.openEncrypted(await storage.readOrCreateDatabaseKey());
   }
 }
+
+/// Menu pictures stored on the phone (downloaded after each sync).
+final productImageCacheProvider = Provider<ProductImageCache>((ref) => ProductImageCache(ref.watch(apiClientProvider).dio));
 
 final syncApiProvider = Provider<SyncApi>((ref) => DioSyncApi(ref.watch(apiClientProvider)));
 

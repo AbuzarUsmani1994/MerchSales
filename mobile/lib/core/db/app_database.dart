@@ -21,6 +21,7 @@ class MenuEntry {
     required this.uomCode,
     required this.decimalPlaces,
     required this.price,
+    this.imageAttachmentId,
   });
 
   final String productId;
@@ -34,6 +35,9 @@ class MenuEntry {
 
   /// Null when no price list has one: shown, but can't be ordered.
   final double? price;
+
+  /// Null shows the placeholder tile.
+  final String? imageAttachmentId;
 }
 
 /// Local copy of pulled entities plus the offline outbox (section 14). Every screen reads
@@ -134,6 +138,8 @@ class LocalProducts extends Table {
   TextColumn get baseUomId => text()();
   TextColumn get salesUomId => text().nullable()();
   TextColumn get ownerBranchId => text().nullable()();
+  /// The product's picture (v3); its file is in ProductImageCache.
+  TextColumn get imageAttachmentId => text().nullable()();
   BoolColumn get isActive => boolean()();
 
   @override
@@ -294,7 +300,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -305,6 +311,10 @@ class AppDatabase extends _$AppDatabase {
                 localPriceListItems, localProductBranches, localOrders]) {
               await m.createTable(table);
             }
+          } else if (from < 3) {
+            // v3: product pictures. Forget the products token so the next sync resends every product with its picture.
+            await m.addColumn(localProducts, localProducts.imageAttachmentId);
+            await customStatement("DELETE FROM sync_tokens WHERE entity = 'products'");
           }
         },
       );
@@ -466,6 +476,7 @@ class AppDatabase extends _$AppDatabase {
             baseUomId: r['baseUomId'] as String,
             salesUomId: Value(str(r['salesUomId'])),
             ownerBranchId: Value(str(r['ownerBranchId'])),
+            imageAttachmentId: Value(str(r['imageAttachmentId'])),
             isActive: flag(r['isActive']))));
       b.insertAllOnConflictUpdate(localPriceLists, (rows['priceLists'] ?? const []).map((r) => LocalPriceListsCompanion.insert(
             id: r['id'] as String,
@@ -537,7 +548,7 @@ class AppDatabase extends _$AppDatabase {
   /// there hidden, stock-tracked items left out (they can't be ordered until stock receiving exists).
   Stream<List<MenuEntry>> watchMenu(String branchId, String today) => customSelect(
         """
-        SELECT p.id, p.name, p.short_name, p.description, p.category_id, c.name AS category_name,
+        SELECT p.id, p.name, p.short_name, p.description, p.category_id, c.name AS category_name, p.image_attachment_id,
                COALESCE(u.code, '') AS uom_code, COALESCE(u.decimal_places, 0) AS decimal_places,
                (SELECT i.unit_price FROM local_price_list_items i
                   JOIN local_price_lists l ON l.id = i.price_list_id
@@ -570,8 +581,15 @@ class AppDatabase extends _$AppDatabase {
                 uomCode: row.read<String>('uom_code'),
                 decimalPlaces: row.read<int>('decimal_places'),
                 price: row.readNullable<double>('price'),
+                imageAttachmentId: row.readNullable<String>('image_attachment_id'),
               ))
           .watch();
+
+  /// Pictures the menu uses, for ProductImageCache to keep on the phone.
+  Future<List<({String productId, String attachmentId})>> productImages() async {
+    final rows = await (select(localProducts)..where((p) => p.isActive.equals(true) & p.imageAttachmentId.isNotNull())).get();
+    return [for (final r in rows) (productId: r.id, attachmentId: r.imageAttachmentId!)];
+  }
 
   Stream<List<LocalOrder>> watchOrders(String branchId) => (select(localOrders)
         ..where((o) => o.branchId.equals(branchId))

@@ -93,6 +93,7 @@ class SessionController extends Notifier<SessionState> {
     final db = ref.read(databaseProvider);
     if (await db.readMeta(SyncMetaKeys.ownerUserId) != profile.userId) {
       await db.clearForNewUser(profile.userId);
+      await ref.read(productImageCacheProvider).clear();
     }
 
     // The section 12 sample command: tells the server which push token reaches this phone.
@@ -215,5 +216,9 @@ class SyncController extends Notifier<SyncUiState> {
     final result = await ref.read(syncEngineProvider).run();
     state = SyncUiState(lastResult: result);
     await ref.read(sessionControllerProvider.notifier).onSyncResult(result);
+    if (result is SyncSucceeded) {
+      // Pictures after the data: the menu is usable at once and they fill in as they arrive.
+      unawaited(ref.read(databaseProvider).productImages().then(ref.read(productImageCacheProvider).syncWith));
+    }
   }
 }

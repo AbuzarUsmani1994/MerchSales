@@ -8,6 +8,7 @@ import '../../core/providers.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../../shared/theme.dart';
 import 'order_providers.dart';
+import 'product_image.dart';
 
 final _money = NumberFormat.decimalPattern();
 
@@ -149,6 +150,7 @@ class _MenuTile extends ConsumerWidget {
 
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      leading: ProductImage(productId: item.productId, attachmentId: item.imageAttachmentId, name: item.name),
       title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600)),
       subtitle: Text(
         [if (item.description != null) item.description!, orderable ? formatMoney(item.price!) : l10n.noPrice].join('\n'),

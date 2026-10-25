@@ -6,6 +6,7 @@ import '../../l10n/generated/app_localizations.dart';
 import '../../shared/theme.dart';
 import 'menu_screen.dart';
 import 'order_providers.dart';
+import 'product_image.dart';
 
 /// Review the order, say who it's for, and send it to the cashier.
 class CartScreen extends ConsumerStatefulWidget {
@@ -56,6 +57,8 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                     padding: const EdgeInsets.fromLTRB(12, 4, 4, 4),
                     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                       Row(children: [
+                        ProductImage(productId: line.item.productId, attachmentId: line.item.imageAttachmentId, name: line.item.name, size: 40),
+                        const SizedBox(width: 10),
                         Expanded(child: Text(line.item.name, style: const TextStyle(fontWeight: FontWeight.w600))),
                         IconButton(onPressed: () => controller.remove(line.item), icon: const Icon(Icons.remove_circle_outline)),
                         Text('${line.quantity}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
