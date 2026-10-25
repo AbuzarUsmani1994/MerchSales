@@ -50,11 +50,21 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/unlock', builder: (context, state) => const UnlockScreen()),
       GoRoute(path: '/change-password', builder: (context, state) => const ChangePasswordScreen()),
       GoRoute(path: '/update', builder: (context, state) => const VersionGateScreen()),
-      GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
-      GoRoute(path: '/sync', builder: (context, state) => const SyncStatusScreen()),
-      GoRoute(path: '/order', builder: (context, state) => const MenuScreen()),
-      GoRoute(path: '/order/cart', builder: (context, state) => const CartScreen()),
-      GoRoute(path: '/orders', builder: (context, state) => const OrdersScreen()),
+      // Work screens sit under Home, so going straight to one (e.g. Orders after sending an
+      // order) still leaves Home underneath: a back arrow, and Android back returns home.
+      GoRoute(
+        path: '/',
+        builder: (context, state) => const HomeScreen(),
+        routes: [
+          GoRoute(path: 'sync', builder: (context, state) => const SyncStatusScreen()),
+          GoRoute(
+            path: 'order',
+            builder: (context, state) => const MenuScreen(),
+            routes: [GoRoute(path: 'cart', builder: (context, state) => const CartScreen())],
+          ),
+          GoRoute(path: 'orders', builder: (context, state) => const OrdersScreen()),
+        ],
+      ),
     ],
   );
 });

@@ -55,10 +55,16 @@ void main() {
   tearDown(() => db.close());
 
   Widget app() {
+    // Same nesting as the app's router: the work screens sit under Home.
     final router = GoRouter(initialLocation: '/order', routes: [
-      GoRoute(path: '/order', builder: (context, state) => const MenuScreen()),
-      GoRoute(path: '/order/cart', builder: (context, state) => const CartScreen()),
-      GoRoute(path: '/orders', builder: (context, state) => const OrdersScreen()),
+      GoRoute(path: '/', builder: (context, state) => const Scaffold(body: Text('HOME')), routes: [
+        GoRoute(
+          path: 'order',
+          builder: (context, state) => const MenuScreen(),
+          routes: [GoRoute(path: 'cart', builder: (context, state) => const CartScreen())],
+        ),
+        GoRoute(path: 'orders', builder: (context, state) => const OrdersScreen()),
+      ]),
     ]);
     return ProviderScope(
       overrides: [
@@ -122,6 +128,15 @@ void main() {
     expect(payload.containsKey('unitPrice'), isFalse, reason: 'the server prices orders, never the phone');
     expect(find.text('Table 4'), findsOneWidget, reason: 'lands on the orders list');
     expect(find.text('Sending'), findsOneWidget);
+
+    // The bug the waiter hit: Orders after sending had no way back.
+    expect(find.byType(BackButton), findsOneWidget);
+    await tester.tap(find.byKey(const Key('orders-new-order')));
+    await settle(tester);
+    expect(find.text('Menu · Lake City'), findsOneWidget, reason: 'New order opens the menu for the next order');
+    await tester.tap(find.byType(BackButton));
+    await settle(tester);
+    expect(find.text('HOME'), findsOneWidget, reason: 'back from the menu returns home');
     await unmount(tester);
   });
 

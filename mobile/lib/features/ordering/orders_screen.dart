@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../core/db/app_database.dart';
@@ -24,6 +25,13 @@ class OrdersScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.ordersTitle)),
+      floatingActionButton: FloatingActionButton.extended(
+        key: const Key('orders-new-order'),
+        // Home -> Menu, so back from the menu returns home rather than to this list.
+        onPressed: () => context.go('/order'),
+        icon: const Icon(Icons.add_shopping_cart),
+        label: Text(l10n.newOrder),
+      ),
       body: RefreshIndicator(
         onRefresh: () => ref.read(syncControllerProvider.notifier).syncNow(),
         child: orders.isEmpty
@@ -32,7 +40,8 @@ class OrdersScreen extends ConsumerWidget {
                 Center(child: Text(l10n.noOrdersYet, style: const TextStyle(color: AppColors.textMuted))),
               ])
             : ListView.separated(
-                padding: const EdgeInsets.all(16),
+                // Room at the bottom so the New order button never covers the last order.
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
                 itemCount: orders.length,
                 separatorBuilder: (context, index) => const SizedBox(height: 8),
                 itemBuilder: (context, index) => _OrderCard(order: orders[index], mine: orders[index].takenByUserId == userId),
