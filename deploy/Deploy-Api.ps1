@@ -46,6 +46,19 @@ Stop-AppPoolIfRunning -Name $AppPoolName
 Sync-Files -Source $SourcePath -Destination $PhysicalPath -ExcludeDirs @("logs")
 
 Ensure-Site -Name $SiteName -PhysicalPath $PhysicalPath -AppPoolName $AppPoolName -Port $Port
+
+# Uploaded files (product pictures) go to Files__RootPath. The app pool's own identity must be
+# able to write there; the setup runbook created the folder but never granted that.
+$filesRoot = [Environment]::GetEnvironmentVariable("Files__RootPath", "Machine")
+if ([string]::IsNullOrWhiteSpace($filesRoot)) { $filesRoot = "C:\StockOrderData\Files" }
+New-Item -ItemType Directory -Path $filesRoot -Force | Out-Null
+icacls $filesRoot /grant "IIS AppPool\$($AppPoolName):(OI)(CI)M" /Q | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    $code = $LASTEXITCODE
+    $global:LASTEXITCODE = 0
+    throw "Could not grant IIS AppPool\$AppPoolName write access to $filesRoot (icacls exit code $code)."
+}
+Write-Host "App pool '$AppPoolName' can write uploaded files to $filesRoot."
 Start-SiteAndPool -SiteName $SiteName -AppPoolName $AppPoolName
 
 try {

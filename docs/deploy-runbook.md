@@ -73,6 +73,8 @@ Export-PfxCertificate -Cert $cert -FilePath "C:\StockOrderData\Certs\signing.pfx
 
 ```powershell
 New-Item -ItemType Directory -Path "C:\StockOrderData\Files" -Force
+# The API's app pool writes uploaded files (product pictures) here. Deploy-Api.ps1 also does this on every deploy.
+icacls "C:\StockOrderData\Files" /grant "IIS AppPool\StockOrderApi:(OI)(CI)M"
 ```
 
 ## 5. Set machine-level environment variables
