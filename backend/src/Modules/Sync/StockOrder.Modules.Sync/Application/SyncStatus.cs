@@ -16,13 +16,14 @@ public sealed record SyncStatusResult(
     bool DeviceRevoked,
     bool WipeRequested,
     int MaxOfflineHours,
-    DateTime ServerTimeUtc);
+    DateTime ServerTimeUtc,
+    string Industry);
 
 public sealed record SyncStatusQuery : IQuery<Result<SyncStatusResult>>;
 
 /// <summary>Section 12 <c>GET /sync/status</c>: what the phone checks before and between syncs.</summary>
 public sealed class SyncStatusQueryHandler(
-    IUnitOfWork unitOfWork, ICurrentUserContext currentUser, ISettingQueries settings, IClock clock)
+    IUnitOfWork unitOfWork, ICurrentUserContext currentUser, ISettingQueries settings, ITenantQueries tenants, IClock clock)
     : IQueryHandler<SyncStatusQuery, Result<SyncStatusResult>>
 {
     public const string MaxOfflineHoursSetting = "Mobile.MaxOfflineHours";
@@ -58,7 +59,7 @@ public sealed class SyncStatusQueryHandler(
 
         return Result.Success(new SyncStatusResult(
             device.MinVersion, device.LatestVersion, device.StoreUrl, device.IsRevoked, device.WipeRequested,
-            maxOfflineHours, clock.UtcNow));
+            maxOfflineHours, clock.UtcNow, await tenants.GetIndustryAsync(currentUser.TenantId, ct)));
     }
 
     private sealed record DeviceRow(bool IsRevoked, bool WipeRequested, string? MinVersion, string? LatestVersion, string? StoreUrl);

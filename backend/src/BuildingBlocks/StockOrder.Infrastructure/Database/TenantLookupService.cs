@@ -9,7 +9,7 @@ internal sealed class TenantLookupService(IBypassConnectionFactory bypassFactory
         await using var connection = await bypassFactory.OpenAsync(ct);
         await using var command = connection.CreateCommand();
         command.CommandText = """
-            SELECT Id, Code, Name, Status, IsPlatform
+            SELECT Id, Code, Name, Status, IsPlatform, Industry
             FROM tenancy.Tenant
             WHERE Code = @code
             """;
@@ -26,6 +26,7 @@ internal sealed class TenantLookupService(IBypassConnectionFactory bypassFactory
             reader.GetString(1),
             reader.GetString(2),
             reader.GetString(3),
-            reader.GetBoolean(4));
+            reader.GetBoolean(4),
+            reader.GetString(5));
     }
 }

@@ -6,4 +6,4 @@ public interface ITenantLookupService
     Task<TenantLookupResult?> FindByCodeAsync(string tenantCode, CancellationToken ct);
 }
 
-public sealed record TenantLookupResult(Guid TenantId, string Code, string Name, string Status, bool IsPlatform);
+public sealed record TenantLookupResult(Guid TenantId, string Code, string Name, string Status, bool IsPlatform, string Industry);

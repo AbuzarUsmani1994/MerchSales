@@ -31,7 +31,8 @@ public sealed record LoginResult(
     string DisplayName,
     Guid TenantId,
     string TenantCode,
-    string TenantName);
+    string TenantName,
+    string TenantIndustry);
 
 public sealed class LoginCommandValidator : AbstractValidator<LoginCommand>
 {
@@ -149,7 +150,8 @@ public sealed class LoginCommandHandler(
             user.DisplayName,
             tenant.TenantId,
             tenant.Code,
-            tenant.Name));
+            tenant.Name,
+            tenant.Industry));
     }
 
     private static async Task<User?> FindUserAsync(
