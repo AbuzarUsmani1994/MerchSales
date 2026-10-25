@@ -40,6 +40,8 @@ export interface MenuItem {
   isAvailable: boolean;
   canEdit: boolean;
   canSetBranchPricing: boolean;
+  /** The item's picture, or null for the placeholder. Changes whenever the picture is replaced. */
+  imageAttachmentId: string | null;
 }
 
 /** Sentinel for "the shared menu, no branch" in selects (mat-select can't use null reliably). */

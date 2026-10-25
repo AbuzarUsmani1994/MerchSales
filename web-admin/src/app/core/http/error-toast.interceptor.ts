@@ -1,4 +1,4 @@
-import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
+import { HttpContextToken, HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { catchError, throwError } from 'rxjs';
@@ -9,8 +9,14 @@ import { ProblemDetails } from '../auth/auth.models';
  * (the `errors` extension) are left for the calling component to render inline — this only
  * covers the generic "something went wrong" case.
  */
+/** Set on a request whose failure the caller handles quietly (e.g. a missing picture). */
+export const SILENT_ERRORS = new HttpContextToken<boolean>(() => false);
+
 export const errorToastInterceptor: HttpInterceptorFn = (req, next) => {
   const snackBar = inject(MatSnackBar);
+  if (req.context.get(SILENT_ERRORS)) {
+    return next(req);
+  }
 
   return next(req).pipe(
     catchError((error: unknown) => {

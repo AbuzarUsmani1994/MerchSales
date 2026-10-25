@@ -24,6 +24,7 @@ import {
   NewItemDialogComponent,
   NewItemDialogData,
 } from './menu-dialogs.component';
+import { PictureChange, ProductImageComponent, ProductImageService } from './product-image';
 
 /**
  * Catalog → Menu. The Owner manages the shared menu; a branch manager sees it as charged at
@@ -46,6 +47,7 @@ import {
     MatSlideToggleModule,
     MatTableModule,
     MatTooltipModule,
+    ProductImageComponent,
   ],
   template: `
     <div class="page">
@@ -117,12 +119,18 @@ import {
           <ng-container matColumnDef="item">
             <th mat-header-cell *matHeaderCellDef>Item</th>
             <td mat-cell *matCellDef="let item" [class.inactive]="!item.isActive">
-              <span class="cell-primary">{{ item.name }}</span>
-              <span class="cell-secondary">
-                <span class="mono">{{ item.sku }}</span>
-                @if (item.shortName) { · {{ item.shortName }} }
-                · per {{ item.uomCode }}
-              </span>
+              <div class="item-cell">
+                <app-product-image [productId]="item.id" [attachmentId]="item.imageAttachmentId" [name]="item.name" [size]="44" />
+                <div>
+                  <span class="cell-primary">{{ item.name }}</span>
+                  <span class="cell-secondary">
+                    <span class="mono">{{ item.sku }}</span>
+                    @if (item.shortName) { · {{ item.shortName }} }
+                    · per {{ item.uomCode }}
+                    @if (!item.imageAttachmentId && item.canEdit) { · <span class="no-picture">No picture</span> }
+                  </span>
+                </div>
+              </div>
             </td>
           </ng-container>
           <ng-container matColumnDef="category">
@@ -199,6 +207,9 @@ import {
     </div>
   `,
   styles: `
+    .item-cell { display: flex; gap: 0.75rem; align-items: center; }
+    .item-cell .cell-primary, .item-cell .cell-secondary { display: block; }
+    .no-picture { color: var(--so-warning); }
     .toolbar { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
     .branch-field { width: 260px; }
     .search-field { flex: 1; min-width: 200px; }
@@ -219,6 +230,7 @@ export class MenuComponent implements OnInit {
   private readonly config = inject(ConfigService);
   private readonly auth = inject(AuthService);
   private readonly dialog = inject(MatDialog);
+  private readonly images = inject(ProductImageService);
 
   readonly shared = SHARED_MENU;
   readonly columns = ['item', 'category', 'scope', 'price', 'available', 'actions'];
@@ -299,9 +311,20 @@ export class MenuComponent implements OnInit {
       .afterClosed()
       .subscribe(async (request) => {
         if (!request) return;
-        await firstValueFrom(this.http.post(`${this.baseUrl}/products`, request));
+        const { picture, ...item } = request;
+        const id = await firstValueFrom(this.http.post<string>(`${this.baseUrl}/products`, item));
+        await this.savePicture(id, picture);
         await this.load();
       });
+  }
+
+  /** Undefined = unchanged, null = remove, a Blob = upload (already shrunk by the dialog). */
+  private async savePicture(productId: string, picture: PictureChange): Promise<void> {
+    if (picture === null) {
+      await this.images.remove(productId);
+    } else if (picture) {
+      await this.images.upload(productId, picture);
+    }
   }
 
   openEdit(item: MenuItem): void {
@@ -311,7 +334,9 @@ export class MenuComponent implements OnInit {
       .afterClosed()
       .subscribe(async (request) => {
         if (!request) return;
-        await firstValueFrom(this.http.put(`${this.baseUrl}/products/${item.id}`, request));
+        const { picture, ...changes } = request;
+        await firstValueFrom(this.http.put(`${this.baseUrl}/products/${item.id}`, changes));
+        await this.savePicture(item.id, picture);
         await this.load();
       });
   }

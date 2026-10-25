@@ -8,6 +8,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { BranchSummary } from '../../core/auth/auth.models';
 import { CatalogLookups, MenuItem, SHARED_MENU } from './catalog.models';
+import { PictureChange, PicturePickerComponent } from './product-image';
 
 const pricePattern = /^\d+(\.\d{1,2})?$/;
 
@@ -24,10 +25,11 @@ export interface NewItemDialogData {
 @Component({
   selector: 'app-new-item-dialog',
   standalone: true,
-  imports: [ReactiveFormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule],
+  imports: [ReactiveFormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatButtonModule, PicturePickerComponent],
   template: `
     <h2 mat-dialog-title>New menu item</h2>
     <mat-dialog-content>
+      <app-picture-picker [name]="form.controls.name.value" (changed)="picture = $event" />
       <form [formGroup]="form" (ngSubmit)="submit()">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Name</mat-label>
@@ -110,6 +112,7 @@ export class NewItemDialogComponent {
   readonly data = inject<NewItemDialogData>(MAT_DIALOG_DATA);
   private readonly fb = inject(FormBuilder);
   readonly shared = SHARED_MENU;
+  picture: PictureChange;
   readonly activeCategories = this.data.lookups.categories.filter((c) => c.isActive);
 
   /** Restaurants sell dishes per portion; pre-select those when the template has them. */
@@ -147,6 +150,7 @@ export class NewItemDialogComponent {
       uomId: v.uomId,
       price: Number(v.price),
       ownerBranchId: v.soldAt === SHARED_MENU ? null : v.soldAt,
+      picture: this.picture,
     });
   }
 }
@@ -159,10 +163,15 @@ export interface EditItemDialogData {
 @Component({
   selector: 'app-edit-item-dialog',
   standalone: true,
-  imports: [ReactiveFormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSlideToggleModule, MatButtonModule],
+  imports: [
+    ReactiveFormsModule, MatDialogModule, MatFormFieldModule, MatInputModule, MatSelectModule, MatSlideToggleModule, MatButtonModule,
+    PicturePickerComponent,
+  ],
   template: `
     <h2 mat-dialog-title>Edit {{ data.item.name }}</h2>
     <mat-dialog-content>
+      <app-picture-picker [productId]="data.item.id" [currentAttachmentId]="data.item.imageAttachmentId" [name]="data.item.name"
+                          (changed)="picture = $event" />
       <form [formGroup]="form" (ngSubmit)="submit()">
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Name</mat-label>
@@ -173,7 +182,7 @@ export interface EditItemDialogData {
             <mat-label>{{ data.item.ownerBranchId ? 'Price (PKR)' : 'Base price (PKR)' }}</mat-label>
             <input matInput formControlName="price" inputmode="decimal" />
             @if (!data.item.ownerBranchId) {
-              <mat-hint>Used at every branch without its own price.</mat-hint>
+              <mat-hint>Default for all branches</mat-hint>
             }
             @if (form.controls.price.hasError('pattern')) {
               <mat-error>Numbers only, up to 2 decimals</mat-error>
@@ -206,12 +215,18 @@ export interface EditItemDialogData {
       <button mat-flat-button color="primary" [disabled]="form.invalid" (click)="submit()">Save</button>
     </mat-dialog-actions>
   `,
-  styles: `.toggle-hint { margin-top: 0.5rem; }`,
+  styles: `
+    .toggle-hint { margin-top: 0.5rem; }
+    /* Room for the price hint, so the next field's floating label doesn't sit on it. */
+    .form-row { margin-bottom: 0.5rem; }
+  `,
 })
 export class EditItemDialogComponent {
   readonly dialogRef = inject(MatDialogRef<EditItemDialogComponent>);
   readonly data = inject<EditItemDialogData>(MAT_DIALOG_DATA);
   private readonly fb = inject(FormBuilder);
+
+  picture: PictureChange;
 
   private readonly ownPrice = this.data.item.ownerBranchId ? this.data.item.branchPrice : this.data.item.basePrice;
 
@@ -236,6 +251,7 @@ export class EditItemDialogComponent {
       categoryId: v.categoryId || null,
       isActive: v.isActive,
       price: v.price === '' ? null : Number(v.price),
+      picture: this.picture,
     });
   }
 }
