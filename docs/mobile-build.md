@@ -41,9 +41,11 @@ publish updates to an app already installed on phones — back up the values som
    given anyone a build signed with the old key, a new key means they can't install updates
    over it without uninstalling first.
 
-If you skip this step entirely, the mobile workflow still works — it just produces a
-**debug-signed** APK instead of a release-signed one, which is fine for testing but
-shouldn't be the one you hand out widely.
+If you skip this step entirely, the mobile workflow still works, but each build is signed
+with a **throwaway key** made fresh on GitHub's build machine. Android only installs an update
+over an app signed with the same key, so every new build then has to be installed by
+uninstalling the old app first (which also clears its unsent orders). Do this step before you
+hand the app to staff.
 
 ### 3. Firebase (push notifications) — optional
 
@@ -70,8 +72,8 @@ by hand (or a prod one):
 2. Choose `dev` (for testing, works with an `http://` server) or `prod` (HTTPS server only).
 3. Wait for the run to finish (about 10 minutes).
 4. Open the finished run, scroll to **Artifacts**, and download it. GitHub hands you a
-   `.zip`; the `.apk` is inside, named like `app-dev-1.0.0-debug.apk` (or `...-release.apk`
-   once the signing secrets from step 2 exist).
+   `.zip`; the `.apk` is inside, named like `app-dev-1.0.0.apk` (`app-<flavor>-<version>.apk`).
+   It's a release build of about 20-25 MB that runs on any Android phone.
 
 ## Installing the APK on an Android phone
 

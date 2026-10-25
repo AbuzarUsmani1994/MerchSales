@@ -116,11 +116,12 @@ jobs:
         env:
           API_BASE_URL: ${{ vars.API_BASE_URL }}
         run: |
-          BUILD_MODE="--debug"
-          if [ "${{ steps.keystore.outputs.hasKeystore }}" = "true" ]; then
-            BUILD_MODE="--release"
-          fi
-          flutter build apk $BUILD_MODE --flavor "${{ steps.flavor.outputs.flavor }}" \
+          # Always release mode: compiled Dart, no debug VM, about a fifth of a debug APK's
+          # size. Signing is separate: the keystore secrets when present, otherwise the
+          # Android debug key (android/app/build.gradle.kts), which section 17.1 allows.
+          # Real phones only (32- and 64-bit ARM); x86_64 is just for PC emulators.
+          flutter build apk --release --flavor "${{ steps.flavor.outputs.flavor }}" \
+            --target-platform android-arm,android-arm64 \
             --dart-define=API_BASE_URL="$API_BASE_URL" \
             --dart-define=FLAVOR="${{ steps.flavor.outputs.flavor }}" \
             --dart-define=APP_VERSION="${{ steps.flavor.outputs.version }}"
@@ -129,12 +130,13 @@ jobs:
         id: artifact
         run: |
           FLAVOR="${{ steps.flavor.outputs.flavor }}"
-          MODE="debug"
-          if [ "${{ steps.keystore.outputs.hasKeystore }}" = "true" ]; then MODE="release"; fi
-          NAME="app-$FLAVOR-${{ steps.flavor.outputs.version }}-$MODE.apk"
-          SRC="build/app/outputs/flutter-apk/app-$FLAVOR-$MODE.apk"
-          cp "$SRC" "build/app/outputs/flutter-apk/$NAME"
+          NAME="app-$FLAVOR-${{ steps.flavor.outputs.version }}.apk"
+          cp "build/app/outputs/flutter-apk/app-$FLAVOR-release.apk" "build/app/outputs/flutter-apk/$NAME"
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          if [ "${{ steps.keystore.outputs.hasKeystore }}" != "true" ]; then
+            echo "::warning::No release keystore secrets: this APK is signed with this build's throwaway debug key. Phones can't install the next build over it without uninstalling first. Run the create-keystore workflow once (docs/mobile-build.md)."
+          fi
+          ls -l "build/app/outputs/flutter-apk/$NAME"
 
       - uses: actions/upload-artifact@v4
         with:
