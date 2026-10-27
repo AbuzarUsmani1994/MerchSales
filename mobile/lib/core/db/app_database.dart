@@ -635,6 +635,9 @@ class AppDatabase extends _$AppDatabase {
   Future<String?> readSetting(String key) async =>
       (await (select(localSettings)..where((s) => s.key.equals(key))).getSingleOrNull())?.value;
 
+  Stream<String?> watchSetting(String key) =>
+      (select(localSettings)..where((s) => s.key.equals(key))).watchSingleOrNull().map((row) => row?.value);
+
   Stream<int> watchPermissionCount() {
     final count = localPermissions.code.count(distinct: true);
     return (selectOnly(localPermissions)..addColumns([count])).map((row) => row.read(count) ?? 0).watchSingle();

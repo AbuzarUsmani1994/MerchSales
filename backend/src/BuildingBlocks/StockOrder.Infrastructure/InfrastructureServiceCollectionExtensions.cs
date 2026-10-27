@@ -49,6 +49,7 @@ public static class InfrastructureServiceCollectionExtensions
 
         services.AddSingleton<IBypassConnectionFactory, BypassConnectionFactory>();
         services.AddScoped<ITenantLookupService, TenantLookupService>();
+        services.AddScoped<IPublicMenuLinkLookup, PublicMenuLinkLookup>();
         services.AddScoped<ICrossTenantRunner, CrossTenantRunner>();
         services.AddScoped<ITenantProvisioningConnection, TenantProvisioningConnection>();
 

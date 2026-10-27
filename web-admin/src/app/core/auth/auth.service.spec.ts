@@ -45,6 +45,7 @@ describe('AuthService', () => {
       tenantId: 't1',
       tenantCode: 'ACME',
       tenantName: 'Acme',
+      tenantIndustry: 'Restaurant',
     });
 
     // Let the `await firstValueFrom(...)` continuation inside AuthService.login run

@@ -7,7 +7,7 @@ namespace StockOrder.ArchitectureTests;
 
 /// <summary>
 /// Section 6: the RLS bypass is only legitimate for tenant-by-code lookup at login, the
-/// Worker's cross-tenant jobs, platform tenant provisioning, and the mobile version-gate
+/// Worker's cross-tenant jobs, platform tenant provisioning, the customer menu link lookup, and the mobile version-gate
 /// middleware (which by nature reads across every tenant's devices). This test is the
 /// documented replacement for making <see cref="IBypassConnectionFactory"/> itself
 /// <c>internal</c>, which isn't possible (see the interface's XML doc).
@@ -20,6 +20,7 @@ public sealed class BypassConnectionFactoryTests
         "StockOrder.Infrastructure.Database.BypassConnectionFactory",
         "StockOrder.Infrastructure.InfrastructureServiceCollectionExtensions", // DI registration only, never calls it
         "StockOrder.Infrastructure.Database.TenantLookupService",
+        "StockOrder.Infrastructure.Database.PublicMenuLinkLookup", // customer menu code -> its branch (docs/decisions.md)
         "StockOrder.Infrastructure.Database.CrossTenantRunner",
         "StockOrder.Infrastructure.Database.TenantProvisioningConnection",
         "StockOrder.Infrastructure.Outbox.OutboxDispatcherService",

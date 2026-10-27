@@ -13,6 +13,12 @@ import { ConfigService } from '../../core/config.service';
 import { AuthService } from '../../core/auth/auth.service';
 import { BranchSummary } from '../../core/auth/auth.models';
 
+interface PublicMenuLink {
+  branchId: string;
+  isOn: boolean;
+  code: string | null;
+}
+
 interface LocationSummary {
   id: string;
   code: string;
@@ -171,6 +177,93 @@ export class NewWarehouseDialogComponent {
   }
 }
 
+/**
+ * A restaurant branch's customer menu: guests scan the QR on a waiter's phone and see the
+ * branch's menu, prices and pictures in their own browser. The QR itself lives in the app.
+ */
+@Component({
+  selector: 'app-customer-menu-dialog',
+  standalone: true,
+  imports: [MatDialogModule, MatButtonModule, MatIconModule, MatProgressBarModule],
+  template: `
+    <h2 mat-dialog-title>Customer menu · {{ data.name }}</h2>
+    <mat-dialog-content>
+      @if (busy()) {
+        <mat-progress-bar mode="indeterminate" />
+      }
+      <p class="intro">
+        Waiters show a QR on their phone (Home, then Menu QR). Guests scan it with their own camera and see
+        this branch's menu, prices and pictures in their browser. No app or login, and nothing but the menu.
+      </p>
+      @if (link(); as current) {
+        @if (current.isOn && current.code) {
+          <div class="state on"><mat-icon>check_circle</mat-icon> On</div>
+          <a class="link" [href]="url(current.code)" target="_blank" rel="noopener">{{ url(current.code) }}</a>
+          <p class="hint">Waiters' phones get changes at their next sync. A new link stops the old QR working.</p>
+        } @else {
+          <div class="state"><mat-icon>do_not_disturb_on</mat-icon> Off</div>
+          <p class="hint">Switch it on to give waiters a menu QR for this branch.</p>
+        }
+      }
+    </mat-dialog-content>
+    <mat-dialog-actions align="end">
+      <button mat-button (click)="dialogRef.close()">Close</button>
+      @if (link()?.isOn) {
+        <button mat-button color="warn" [disabled]="busy()" (click)="change('switch-off')">Switch off</button>
+        <button mat-stroked-button [disabled]="busy()" (click)="change('new-link')">New link</button>
+      } @else if (link()) {
+        <button mat-flat-button color="primary" [disabled]="busy()" (click)="change('new-link')">Switch on</button>
+      }
+    </mat-dialog-actions>
+  `,
+  styles: `
+    .intro { margin-top: 0; color: var(--so-text-muted); }
+    .state { display: inline-flex; align-items: center; gap: 0.35rem; font-weight: 600; color: var(--so-text-muted); }
+    .state.on { color: var(--so-success); }
+    .state .mat-icon { width: 20px; height: 20px; font-size: 20px; }
+    .link { display: block; margin: 0.5rem 0; word-break: break-all; font-family: var(--so-font-mono, monospace); font-size: 0.85rem; }
+    .hint { font-size: 0.8rem; color: var(--so-text-muted); }
+  `,
+})
+export class CustomerMenuDialogComponent implements OnInit {
+  readonly dialogRef = inject(MatDialogRef<CustomerMenuDialogComponent>);
+  readonly data = inject<BranchSummary>(MAT_DIALOG_DATA);
+  private readonly http = inject(HttpClient);
+  private readonly config = inject(ConfigService);
+
+  readonly link = signal<PublicMenuLink | null>(null);
+  readonly busy = signal(true);
+
+  async ngOnInit(): Promise<void> {
+    try {
+      this.link.set(await firstValueFrom(this.http.get<PublicMenuLink>(this.base())));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  /** The page a QR opens: served by the API's own site. */
+  url(code: string): string {
+    return `${this.config.apiBaseUrl}/m/${code}`;
+  }
+
+  async change(action: 'new-link' | 'switch-off'): Promise<void> {
+    if (action === 'new-link' && this.link()?.isOn && !confirm('Make a new link? The current QR stops working, and waiters get the new one at their next sync.')) {
+      return;
+    }
+    this.busy.set(true);
+    try {
+      this.link.set(await firstValueFrom(this.http.post<PublicMenuLink>(`${this.base()}/${action}`, null)));
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  private base(): string {
+    return `${this.config.apiBaseUrl}/api/v1/tenancy/branches/${this.data.id}/public-menu`;
+  }
+}
+
 @Component({
   selector: 'app-branches',
   standalone: true,
@@ -242,6 +335,12 @@ export class NewWarehouseDialogComponent {
           <ng-container matColumnDef="actions">
             <th mat-header-cell *matHeaderCellDef></th>
             <td mat-cell *matCellDef="let branch" class="cell-actions">
+              @if (branch.isActive && isRestaurant()) {
+                <button mat-button (click)="openCustomerMenu(branch)">
+                  <mat-icon>qr_code_2</mat-icon>
+                  Customer menu
+                </button>
+              }
               @if (branch.isActive) {
                 <button mat-button (click)="openNewWarehouseDialog(branch)">
                   <mat-icon>add</mat-icon>
@@ -295,6 +394,9 @@ export class BranchesComponent implements OnInit {
   /** Creating branches is tenant-wide; a branch manager only sees and extends their own branch. */
   readonly canCreateBranches = computed(() => this.auth.hasTenantWidePermission('Branches.Manage'));
 
+  /** The customer menu (QR) is for restaurants only. */
+  readonly isRestaurant = computed(() => this.auth.tenant()?.industry === 'Restaurant');
+
   readonly rows = computed<BranchRow[]>(() =>
     this.branches().map((branch) => ({
       ...branch,
@@ -334,6 +436,10 @@ export class BranchesComponent implements OnInit {
       // The new branch must also appear in branch pickers (user/role dialogs) which read /me.
       await Promise.all([this.load(), this.auth.loadMe()]);
     });
+  }
+
+  openCustomerMenu(branch: BranchSummary): void {
+    this.dialog.open(CustomerMenuDialogComponent, { width: '480px', data: branch });
   }
 
   openNewWarehouseDialog(branch: BranchSummary): void {

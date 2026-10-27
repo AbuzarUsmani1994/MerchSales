@@ -12,6 +12,8 @@ const TENANT_KEY = 'stockorder.tenant';
 export interface TenantInfo {
   code: string;
   name: string;
+  /** 'Restaurant', 'Pharma', ...; missing in a session signed in before it was stored. */
+  industry?: string;
 }
 
 /**
@@ -59,7 +61,7 @@ export class AuthService {
       this.http.post<LoginResponse>(`${this.config.apiBaseUrl}/api/v1/auth/login`, request),
     );
     this.storeTokens(response.accessToken, response.refreshToken);
-    const tenant: TenantInfo = { code: response.tenantCode, name: response.tenantName };
+    const tenant: TenantInfo = { code: response.tenantCode, name: response.tenantName, industry: response.tenantIndustry };
     sessionStorage.setItem(TENANT_KEY, JSON.stringify(tenant));
     this.tenantSignal.set(tenant);
     await this.loadMe();

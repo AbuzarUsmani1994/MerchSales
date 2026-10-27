@@ -190,5 +190,12 @@
   "takenByYou": "by you",
   "walkIn": "Walk-in",
   "offlineCantOrder": "You've been offline too long to take new orders. Connect and sync first.",
-  "ok": "OK"
+  "ok": "OK",
+  "menuQrTitle": "Menu QR",
+  "menuQrHint": "Customers scan it to see the menu on their phone",
+  "menuQrScanHint": "Scan with your phone camera to see our menu",
+  "menuQrOffTitle": "The customer menu is off",
+  "menuQrOffBody": "It isn't switched on for {branch} yet. A manager can switch it on in the back office: Branches, then Customer menu.",
+  "@menuQrOffBody": { "placeholders": { "branch": { "type": "String" } } },
+  "menuQrSyncHint": "Switched it on just now? Pull down on home to sync."
 }

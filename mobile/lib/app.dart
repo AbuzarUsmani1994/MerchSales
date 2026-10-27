@@ -9,6 +9,7 @@ import 'features/auth/change_password_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/unlock_screen.dart';
 import 'features/home/home_screen.dart';
+import 'features/menu_qr/menu_qr_screen.dart';
 import 'features/ordering/cart_screen.dart';
 import 'features/ordering/menu_screen.dart';
 import 'features/ordering/orders_screen.dart';
@@ -66,6 +67,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [GoRoute(path: 'cart', pageBuilder: (context, state) => _page(state, const CartScreen()))],
           ),
           GoRoute(path: 'orders', pageBuilder: (context, state) => _page(state, const OrdersScreen())),
+          GoRoute(path: 'menu-qr', pageBuilder: (context, state) => _page(state, const MenuQrScreen())),
         ],
       ),
     ],

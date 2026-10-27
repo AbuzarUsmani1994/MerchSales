@@ -117,14 +117,27 @@ builder.Services.AddRateLimiter(options =>
             PermitLimit = 10,
         }));
 
-    options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+    // The customer menu (QR) is per IP only: a restaurant's guests often share its Wi-Fi, so one
+    // address can be many phones, each loading the page and its pictures.
+    options.AddPolicy(StockOrder.Modules.Catalog.Api.PublicMenuController.RateLimitPolicy, httpContext =>
         System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
-            httpContext.User.FindFirst("sub")?.Value ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
             {
                 Window = TimeSpan.FromMinutes(1),
-                PermitLimit = 300,
+                PermitLimit = 1200,
             }));
+
+    options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
+        httpContext.Request.Path.StartsWithSegments("/m")
+            ? System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("public-menu")
+            : System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
+                httpContext.User.FindFirst("sub")?.Value ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions
+                {
+                    Window = TimeSpan.FromMinutes(1),
+                    PermitLimit = 300,
+                }));
 });
 
 builder.Services.Configure<ForwardedHeadersOptions>(options =>

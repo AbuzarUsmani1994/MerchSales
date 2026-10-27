@@ -68,6 +68,7 @@ class HomeScreen extends ConsumerWidget {
             const SizedBox(height: 16),
             const _OfflineBanner(),
             const _OrderingCard(),
+            const _MenuQrCard(),
             const _SyncCard(),
             const SizedBox(height: 12),
             const _BiometricOffer(),
@@ -213,6 +214,57 @@ class _OrderingCard extends ConsumerWidget {
           const SizedBox(width: 12),
           action(const Key('home-orders'), Icons.receipt_long_outlined, l10n.ordersTitle, l10n.ordersHint, '/orders'),
         ],
+      ),
+    );
+  }
+}
+
+/// Restaurants: the QR a waiter shows guests so they open the branch menu on their own phone.
+class _MenuQrCard extends ConsumerWidget {
+  const _MenuQrCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(industryProvider) != AppIndustry.restaurant) return const SizedBox.shrink();
+    if ((ref.watch(orderBranchesProvider).value ?? const []).isEmpty) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
+    final palette = context.palette;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          key: const Key('home-menu-qr'),
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => context.push('/menu-qr'),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(color: palette.primarySoft, borderRadius: BorderRadius.circular(12)),
+                  child: Icon(Icons.qr_code_2, color: palette.primary, size: 28),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.menuQrTitle, style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16, color: palette.ink)),
+                      const SizedBox(height: 2),
+                      Text(l10n.menuQrHint, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: palette.primary),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

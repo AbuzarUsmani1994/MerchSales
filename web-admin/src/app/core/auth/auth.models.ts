@@ -17,6 +17,7 @@ export interface LoginResponse {
   tenantId: string;
   tenantCode: string;
   tenantName: string;
+  tenantIndustry: string;
 }
 
 export interface RefreshResponse {
