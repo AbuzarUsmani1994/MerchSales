@@ -21,7 +21,8 @@ or its major version changes.
 | Otp.NET | MIT | TOTP MFA |
 | FirebaseAdmin | Apache-2.0 | Push (Phase 1+) |
 | ClosedXML | MIT | Excel import/export |
-| QuestPDF | MIT (Community licence free below USD 1M annual revenue) | PDF generation |
+| QuestPDF | QuestPDF Community licence: free for companies below USD 1M annual revenue (above that a paid licence is needed) | PDF generation: the 80 mm counter receipt |
+| Roboto, Noto Nastaliq Urdu (font files, embedded in the Sales module) | Apache-2.0, SIL OFL 1.1 | Receipt text, Latin and Urdu |
 | Microsoft.AspNetCore.OpenApi | MIT | |
 | Scalar.AspNetCore | MIT | Dev-only API explorer |
 | Serilog.AspNetCore / .Sinks.Seq / .Sinks.File | Apache-2.0 | |

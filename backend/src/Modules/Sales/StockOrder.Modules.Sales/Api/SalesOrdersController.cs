@@ -73,6 +73,25 @@ public sealed class SalesOrdersController(IMediator mediator) : ControllerBase
             request.LoyaltyPhone, request.UseReward), ct)).ToActionResult();
     }
 
+    /// <summary>
+    /// The paid order's 80 mm receipt as a PDF for the till's printer. <paramref name="tendered"/>
+    /// prints cash received and change on the first print; a reprint passes <paramref name="copy"/>.
+    /// </summary>
+    [HttpGet("{orderId:guid}/receipt")]
+    [Authorize(Policy = SalesPermissions.View)]
+    [BranchScoped]
+    public async Task<IActionResult> Receipt(Guid orderId, [FromQuery] decimal? tendered, [FromQuery] bool copy, CancellationToken ct)
+    {
+        var result = await mediator.Send(new GetReceiptQuery(orderId, tendered, copy), ct);
+        if (result.IsFailure)
+        {
+            return result.ToActionResult();
+        }
+
+        Response.Headers.CacheControl = "no-store";
+        return File(result.Value, "application/pdf");
+    }
+
     public sealed record CancelSalesOrderRequest(string Reason);
 
     [HttpPost("{orderId:guid}/cancel")]

@@ -17,10 +17,16 @@
     <PackageReference Include="Mediator.Abstractions" />
     <PackageReference Include="Dapper" />
     <PackageReference Include="FluentValidation" />
+    <PackageReference Include="QuestPDF" />
   </ItemGroup>
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Receipt fonts (Roboto: Apache-2.0, Noto Nastaliq Urdu: OFL-1.1), embedded so PDFs look the same on every server. -->
+    <EmbeddedResource Include="Infrastructure\Fonts\*.ttf" />
   </ItemGroup>
 
 </Project>

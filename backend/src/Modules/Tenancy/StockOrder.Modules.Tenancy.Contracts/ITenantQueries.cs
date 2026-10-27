@@ -8,4 +8,7 @@ public interface ITenantQueries
 
     /// <summary>The tenant's industry template ("Restaurant", "Pharma", ...); the phone app's theme follows it.</summary>
     Task<string> GetIndustryAsync(Guid tenantId, CancellationToken ct);
+
+    /// <summary>The company's name, as printed on receipts.</summary>
+    Task<string> GetNameAsync(Guid tenantId, CancellationToken ct);
 }

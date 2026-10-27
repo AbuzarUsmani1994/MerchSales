@@ -52,6 +52,20 @@
 9. **Smoke test.** Visit `https://your-api-host/health/ready` — should return `Healthy`.
    Sign in to the admin site, create a test tenant, sign in as that tenant's owner.
 
+## Receipt printers at the till
+
+The cashier's screen prints an 80 mm receipt (a PDF from the API) after every payment, and a
+copy from the order's **Receipt** button on the Paid tab.
+
+- **Printer**: any 80 mm thermal receipt printer installed in Windows with its driver; set its
+  paper size to 80 mm (roll) and make it the till PC's default printer. An ordinary A4 printer
+  also works: it prints the receipt as a narrow strip.
+- **Print without the dialog**: browsers always ask before printing. On a till PC used only
+  for this, start Chrome with `--kiosk-printing` (add it to the shortcut's target, e.g.
+  `"C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk-printing http://your-admin-site`)
+  and receipts go straight to the default printer.
+- Reprints are marked **COPY** and leave out "cash received / change", which isn't stored.
+
 ## Backup plan
 
 - **Full backup**: daily, e.g. 2 AM, `BACKUP DATABASE StockOrderPlatform TO DISK = '...'

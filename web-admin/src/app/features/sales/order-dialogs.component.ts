@@ -13,6 +13,7 @@ import { MatInputModule } from '@angular/material/input';
 import { ConfigService } from '../../core/config.service';
 import { CashSession, CompletedSale, PaymentMethod, SalesOrder } from './sales.models';
 import { LoyaltyChoice, LoyaltyPanelComponent } from './loyalty-panel.component';
+import { ReceiptPrinter } from './receipt-printer';
 
 function problemMessage(error: unknown): string {
   return error instanceof HttpErrorResponse ? (error.error?.detail ?? error.error?.title ?? 'Something went wrong.') : 'Something went wrong.';
@@ -26,13 +27,15 @@ export interface PaymentDialogData {
 /**
  * Take payment for a confirmed order. The server re-prices nothing here: the total is what
  * was confirmed. Cash shows the change to hand back; other methods charge the exact total.
+ * Nothing is saved until the cashier has reviewed a summary and said yes; the receipt then
+ * prints straight away.
  */
 @Component({
   selector: 'app-payment-dialog',
   standalone: true,
   imports: [ReactiveFormsModule, DecimalPipe, MatDialogModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatInputModule, MatIconModule, LoyaltyPanelComponent],
   template: `
-    <h2 mat-dialog-title>Take payment · {{ data.order.documentNo }}</h2>
+    <h2 mat-dialog-title>{{ reviewing() && !done() ? 'Check and take payment' : 'Take payment' }} · {{ data.order.documentNo }}</h2>
     <mat-dialog-content>
       @if (done(); as sale) {
         <div class="done">
@@ -42,6 +45,10 @@ export interface PaymentDialogData {
             <div class="change">Give back <strong>{{ sale.change | number: '1.0-2' }}</strong></div>
           }
           <div class="muted">Invoice {{ sale.invoiceNo }}@if (sale.paymentNo) { · Receipt {{ sale.paymentNo }} }</div>
+          <div class="printing">
+            <mat-icon>print</mat-icon>
+            @if (printError()) { <span class="danger">{{ printError() }}</span> } @else { <span>Receipt sent to the printer.</span> }
+          </div>
           @if (sale.loyalty; as l) {
             <div class="loyalty-done">
               <mat-icon>loyalty</mat-icon>
@@ -56,6 +63,27 @@ export interface PaymentDialogData {
           }
         </div>
       } @else {
+        @if (reviewing()) {
+          <div class="review">
+            <div class="review-total">PKR {{ total() | number: '1.0-2' }}</div>
+            <div class="muted">by <strong>{{ methodName() }}</strong></div>
+            <dl>
+              <dt>Order</dt><dd>{{ data.order.documentNo }} · {{ data.order.notes || 'Walk-in' }}</dd>
+              <dt>Items</dt><dd>{{ itemCount() }}</dd>
+              <dt>Bill</dt><dd>{{ data.order.grandTotal | number: '1.0-2' }}</dd>
+              @if (reward() > 0) { <dt>Visit reward</dt><dd>-{{ reward() | number: '1.0-2' }}</dd> }
+              @if (loyalty().phone) { <dt>Member</dt><dd>{{ loyalty().phone }}</dd> }
+              @if (isCash()) {
+                <dt>Cash received</dt><dd>{{ value().tendered | number: '1.0-2' }}</dd>
+                <dt>Change</dt><dd class="strong">{{ change() | number: '1.0-2' }}</dd>
+              } @else if (value().reference) {
+                <dt>Reference</dt><dd>{{ value().reference }}</dd>
+              }
+            </dl>
+            <div class="muted small">Taking payment closes the order and prints the receipt. It can't be undone here.</div>
+          </div>
+        }
+        <div [hidden]="reviewing()">
         <div class="total-row">
           <span>{{ data.order.notes || 'Walk-in' }}</span>
           <span class="total">
@@ -96,6 +124,7 @@ export interface PaymentDialogData {
             </mat-form-field>
           }
         </form>
+        </div>
         @if (error()) {
           <div class="callout callout-danger">{{ error() }}</div>
         }
@@ -103,12 +132,16 @@ export interface PaymentDialogData {
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       @if (done()) {
+        <button mat-button (click)="printAgain()"><mat-icon>print</mat-icon> Print again</button>
         <button mat-flat-button color="primary" (click)="dialogRef.close(done())">Done</button>
+      } @else if (reviewing()) {
+        <button mat-button [disabled]="busy()" (click)="reviewing.set(false)">Back</button>
+        <button mat-flat-button color="primary" [disabled]="busy()" (click)="pay()">
+          {{ busy() ? 'Saving…' : 'Yes, take payment' }}
+        </button>
       } @else {
         <button mat-button (click)="dialogRef.close()">Cancel</button>
-        <button mat-flat-button color="primary" [disabled]="busy() || !canPay()" (click)="pay()">
-          {{ busy() ? 'Saving…' : 'Confirm payment' }}
-        </button>
+        <button mat-flat-button color="primary" [disabled]="!canPay()" (click)="review()">Collect payment</button>
       }
     </mat-dialog-actions>
   `,
@@ -123,6 +156,15 @@ export interface PaymentDialogData {
     .done-icon { color: var(--so-success); font-size: 48px; width: 48px; height: 48px; }
     .done-title { font-size: 1.15rem; font-weight: 600; margin: 0.5rem 0; }
     .done .change { margin-bottom: 0.5rem; }
+    .printing { display: flex; gap: 0.4rem; align-items: center; justify-content: center; margin-top: 0.6rem; color: var(--so-text-muted); }
+    .printing .danger { color: var(--so-danger); }
+    .review { text-align: center; padding: 0.25rem 0 0.5rem; }
+    .review-total { font-size: 2rem; line-height: 1.25; font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 0.15rem; }
+    .review dl { display: grid; grid-template-columns: auto 1fr; gap: 0.35rem 1rem; text-align: left; margin: 1rem auto; max-width: 24rem; }
+    .review dt { color: var(--so-text-muted); }
+    .review dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+    .review dd.strong { font-weight: 700; font-size: 1.1rem; }
+    .small { font-size: 0.8rem; }
     .callout-danger { background: var(--so-danger-soft); color: var(--so-danger); margin-top: 0.75rem; }
     .was { color: var(--so-text-muted); font-size: 1rem; font-weight: 400; margin-right: 0.4rem; }
     .loyalty-done { display: flex; gap: 0.4rem; align-items: flex-start; justify-content: center; margin-top: 0.75rem; text-align: left; }
@@ -142,10 +184,16 @@ export class PaymentDialogComponent {
     reference: [''],
   });
 
-  private readonly value = toSignal(this.form.valueChanges, { initialValue: this.form.getRawValue() });
+  readonly value = toSignal(this.form.valueChanges, { initialValue: this.form.getRawValue() });
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
   readonly done = signal<CompletedSale | null>(null);
+  readonly reviewing = signal(false);
+  readonly printError = signal<string | null>(null);
+  private readonly printer = inject(ReceiptPrinter);
+  private tenderedAtPayment: number | null = null;
+  readonly methodName = computed(() => this.data.methods.find((m) => m.id === this.value().methodId)?.name ?? '');
+  readonly itemCount = computed(() => this.data.order.lines.reduce((n, l) => n + l.quantity, 0));
   readonly loyalty = signal<LoyaltyChoice>({ phone: null, useReward: false, rewardAmount: 0 });
 
   /** The visit reward comes off the bill before payment; the server checks it again. */
@@ -172,6 +220,25 @@ export class PaymentDialogComponent {
     }
   }
 
+  /** The last look before anything is saved. */
+  review(): void {
+    this.error.set(null);
+    this.reviewing.set(true);
+  }
+
+  async printAgain(): Promise<void> {
+    await this.printReceipt(true);
+  }
+
+  private async printReceipt(copy: boolean): Promise<void> {
+    this.printError.set(null);
+    try {
+      await this.printer.print(this.data.order.id, { tendered: copy ? null : this.tenderedAtPayment, copy });
+    } catch {
+      this.printError.set("The receipt didn't print. Use Print again.");
+    }
+  }
+
   async pay(): Promise<void> {
     const v = this.form.getRawValue();
     this.busy.set(true);
@@ -191,7 +258,11 @@ export class PaymentDialogComponent {
         ),
       );
       this.done.set(sale);
+      this.tenderedAtPayment = this.isCash() ? Number(v.tendered) : null;
+      void this.printReceipt(false);
     } catch (e) {
+      // Back to the form: the reason (e.g. reward not ready) usually needs a change there.
+      this.reviewing.set(false);
       this.error.set(problemMessage(e));
     } finally {
       this.busy.set(false);

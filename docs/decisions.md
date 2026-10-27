@@ -2,6 +2,28 @@
 
 Short, ADR-style notes on choices that change or add to the Build Spec (CLAUDE.md). Newest first.
 
+## 2026-10-27 — Counter receipt and a final check before payment
+
+**Context.** The owner wants a receipt printed after every payment, and the cashier to confirm
+once more before the payment is committed.
+
+**Decision.**
+- The payment dialog has two steps: **Collect payment** shows a summary (amount, method, cash
+  received and change, visit reward, member); nothing is saved until **Yes, take payment**.
+  **Back** returns to the form with everything kept.
+- Receipts are the section 16 counter receipt: an 80 mm PDF made by the API with QuestPDF
+  (Community licence, free below USD 1M annual revenue), one continuous page for roll printers.
+  Fonts are embedded (Roboto, Apache-2.0; Noto Nastaliq Urdu, OFL-1.1) so Urdu item names print
+  on any server. The browser prints it right after payment; **Print again** and the Paid tab's
+  **Receipt** button print copies marked COPY.
+- Cash received isn't stored (`finance.Payment` has no column for it, and no schema change was
+  wanted), so only the first print shows cash received and change; the API works the change out
+  itself rather than trusting the client.
+- Browsers always show a print dialog; tills that should print silently run Chrome with
+  `--kiosk-printing` (docs/operations.md).
+
+**Approved by** the owner (TRS), 2026-10-27.
+
 ## 2026-10-27 — Visit rewards (restaurants first)
 
 **Context.** The owner wants repeat customers rewarded without SMS (no SMS provider). A points

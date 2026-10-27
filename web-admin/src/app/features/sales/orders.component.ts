@@ -10,6 +10,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSelectModule } from '@angular/material/select';
 import { AuthService } from '../../core/auth/auth.service';
 import { ConfigService } from '../../core/config.service';
+import { ReceiptPrinter } from './receipt-printer';
 import { CancelOrderDialogComponent, PaymentDialogComponent, ShiftDialogComponent } from './order-dialogs.component';
 import { CashSession, PagedList, PaymentMethod, SalesOrder } from './sales.models';
 
@@ -118,6 +119,10 @@ const REFRESH_MS = 10_000;
                     </button>
                   }
                 </div>
+              } @else if (o.status === 'Closed' || o.status === 'Paid') {
+                <div class="actions">
+                  <button mat-button (click)="reprint(o)"><mat-icon>print</mat-icon> Receipt</button>
+                </div>
               }
             </footer>
           </article>
@@ -167,6 +172,7 @@ export class OrdersComponent implements OnInit, OnDestroy {
   private readonly config = inject(ConfigService);
   private readonly auth = inject(AuthService);
   private readonly dialog = inject(MatDialog);
+  private readonly printer = inject(ReceiptPrinter);
 
   readonly branches = this.auth.branches;
   readonly branchId = signal<string>('');
@@ -210,6 +216,11 @@ export class OrdersComponent implements OnInit, OnDestroy {
   async selectBranch(id: string): Promise<void> {
     this.branchId.set(id);
     await this.refresh(true);
+  }
+
+  /** A copy of a paid order's receipt (marked COPY; no cash-received line, which isn't stored). */
+  async reprint(order: SalesOrder): Promise<void> {
+    await this.printer.print(order.id, { copy: true });
   }
 
   async selectTab(tab: Tab): Promise<void> {

@@ -13,6 +13,7 @@ public static class FinanceModule
         services.AddModuleDbContext<FinanceDbContext>(
             (sp, options) => new FinanceDbContext(options, sp.GetRequiredService<ICurrentUserContext>()));
         services.AddScoped<IFinancePosting, FinancePosting>();
+        services.AddScoped<IPaymentQueries, PaymentQueries>();
         return services;
     }
 }
