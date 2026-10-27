@@ -17,6 +17,7 @@ class TokenStorage {
   static const _profileKey = 'stockorder.profile';
   static const _biometricKey = 'stockorder.biometric';
   static const _industryKey = 'stockorder.industry';
+  static const _languageKey = 'stockorder.language';
 
   Future<String?> readAccessToken() => _storage.read(key: _accessTokenKey);
   Future<String?> readRefreshToken() => _storage.read(key: _refreshTokenKey);
@@ -65,6 +66,13 @@ class TokenStorage {
   Future<String?> readIndustry() => _storage.read(key: _industryKey);
 
   Future<void> saveIndustry(String industry) => _storage.write(key: _industryKey, value: industry);
+
+  /// The language the user picked ("en", "ur"); null = follow the phone. A preference of the
+  /// phone's user, so it stays across sign-outs.
+  Future<String?> readLanguage() => _storage.read(key: _languageKey);
+
+  Future<void> saveLanguage(String? code) =>
+      code == null ? _storage.delete(key: _languageKey) : _storage.write(key: _languageKey, value: code);
 
   /// Signs out: tokens and the "must change password" state go; the device id, database key,
   /// last profile (to detect a different user next time) and biometric choice stay.

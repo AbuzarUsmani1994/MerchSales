@@ -6,6 +6,7 @@ import '../../core/api/api_client.dart';
 import '../../core/providers.dart';
 import '../../core/session/session_controller.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../../shared/language_switch.dart';
 import '../../shared/theme.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -54,15 +55,26 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           );
     } on DioException catch (e) {
       setState(() {
-        if (problemCode(e) == 'MFA_REQUIRED') {
+        final code = problemCode(e);
+        if (code == 'MFA_REQUIRED') {
           _mfaRequired = true;
           _errorMessage = l10n.enterAuthenticatorCode;
         } else if (e.response == null) {
           _errorMessage = l10n.networkError;
         } else {
-          _errorMessage = problemDetail(e) ?? l10n.signInFailed;
+          // The app's own text for the usual refusals, so they read in the app's language.
+          _errorMessage = switch (code) {
+            'INVALID_CREDENTIALS' when !_mfaRequired => l10n.errorInvalidCredentials,
+            'LOCKED_OUT' => l10n.errorLockedOut,
+            'TENANT_SUSPENDED' => l10n.errorTenantSuspended,
+            'PERMISSION_DENIED' => l10n.errorNotAllowedOnMobile,
+            _ => problemDetail(e) ?? l10n.signInFailed,
+          };
         }
       });
+    } catch (e) {
+      // Anything else (storage, the local database) used to end the spinner with no message.
+      setState(() => _errorMessage = l10n.errorUnexpected('$e'));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -97,6 +109,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         const BrandMark(size: 40),
                         const SizedBox(width: 12),
                         Text(l10n.appTitle, style: TextStyle(fontSize: 20, fontWeight: FontWeight.w700, color: context.palette.ink)),
+                        const Spacer(),
+                        const LanguageButton(),
                       ]),
                       const SizedBox(height: 40),
                       Text(l10n.loginTitle, style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700, color: context.palette.ink)),

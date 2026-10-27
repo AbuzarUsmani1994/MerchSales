@@ -82,6 +82,22 @@ class IndustryController extends Notifier<AppIndustry> {
   }
 }
 
+/// The language saved on the phone, read at start-up (main) before the first frame.
+final initialLanguageProvider = Provider<String?>((ref) => null);
+
+/// The app's language: "en", "ur", or null to follow the phone's language.
+final languageProvider = NotifierProvider<LanguageController, String?>(LanguageController.new);
+
+class LanguageController extends Notifier<String?> {
+  @override
+  String? build() => ref.read(initialLanguageProvider);
+
+  Future<void> set(String code) async {
+    state = code;
+    await ref.read(tokenStorageProvider).saveLanguage(code);
+  }
+}
+
 final sessionControllerProvider = NotifierProvider<SessionController, SessionState>(SessionController.new);
 
 final syncControllerProvider = NotifierProvider<SyncController, SyncUiState>(SyncController.new);

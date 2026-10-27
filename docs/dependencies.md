@@ -72,6 +72,7 @@ the other UI dependency named in the spec, is still genuinely free MIT — kept 
 | flutter_secure_storage | BSD-3-Clause |
 | mobile_scanner | Apache-2.0 |
 | qr_flutter, qr (transitive) | BSD-3-Clause (customer menu QR; approved 2026-10-27) |
+| Noto Nastaliq Urdu (font file, not a package) | SIL OFL 1.1 (`mobile/assets/fonts/OFL.txt`; Urdu UI) |
 | local_auth | BSD-3-Clause |
 | firebase_core/_messaging/_crashlytics | BSD-3-Clause |
 | path_provider, path | BSD-3-Clause |

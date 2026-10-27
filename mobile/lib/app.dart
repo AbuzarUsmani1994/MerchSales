@@ -16,6 +16,7 @@ import 'features/ordering/orders_screen.dart';
 import 'features/sync/sync_status_screen.dart';
 import 'features/version_gate/version_gate_screen.dart';
 import 'l10n/generated/app_localizations.dart';
+import 'shared/language_switch.dart';
 import 'shared/theme.dart';
 
 /// Where each session state is allowed to be; everything else redirects there.
@@ -82,6 +83,7 @@ class StockOrderApp extends ConsumerWidget {
     return MaterialApp.router(
       onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
       theme: buildAppTheme(ref.watch(industryProvider)),
+      locale: switch (ref.watch(languageProvider)) { final code? => Locale(code), null => null },
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -90,6 +92,8 @@ class StockOrderApp extends ConsumerWidget {
       ],
       supportedLocales: AppLocalizations.supportedLocales,
       routerConfig: ref.watch(routerProvider),
+      builder: (context, child) =>
+          isUrdu(context) ? Theme(data: withUrduLineSpacing(Theme.of(context)), child: child!) : child!,
     );
   }
 }

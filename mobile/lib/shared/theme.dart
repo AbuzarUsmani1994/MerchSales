@@ -124,6 +124,37 @@ extension AppPaletteContext on BuildContext {
   AppPalette get palette => Theme.of(this).extension<AppPalette>() ?? AppPalette.standard;
 }
 
+/// Urdu text (the Urdu UI, and Urdu item or customer names in English) is set in Nastaliq, the
+/// script Urdu readers expect; Latin text stays in the platform font. Bundled in assets/fonts.
+const urduFontFallback = ['NotoNastaliqUrdu'];
+
+/// Nastaliq letters reach far above and below the line: Urdu needs more line spacing than
+/// English, or stacked lines (a title over its hint) overlap.
+/// (Theme text styles carry no line height of their own, so it's set on each one; it then wins
+/// over the default geometry Material merges in.)
+ThemeData withUrduLineSpacing(ThemeData theme) => theme.copyWith(
+      textTheme: _urduHeights(theme.textTheme),
+      primaryTextTheme: _urduHeights(theme.primaryTextTheme),
+      chipTheme: theme.chipTheme.copyWith(
+        labelStyle: _urduLine(theme.chipTheme.labelStyle),
+        secondaryLabelStyle: _urduLine(theme.chipTheme.secondaryLabelStyle),
+      ),
+    );
+
+/// A taller line with the extra space split above and below, so a word stays centred.
+TextStyle? _urduLine(TextStyle? s) => s?.copyWith(height: 1.9, leadingDistribution: TextLeadingDistribution.even);
+
+TextTheme _urduHeights(TextTheme t) {
+  TextStyle? tall(TextStyle? s) => (s ?? const TextStyle()).copyWith(height: 2.0);
+  return t.copyWith(
+    displayLarge: tall(t.displayLarge), displayMedium: tall(t.displayMedium), displaySmall: tall(t.displaySmall),
+    headlineLarge: tall(t.headlineLarge), headlineMedium: tall(t.headlineMedium), headlineSmall: tall(t.headlineSmall),
+    titleLarge: tall(t.titleLarge), titleMedium: tall(t.titleMedium), titleSmall: tall(t.titleSmall),
+    bodyLarge: tall(t.bodyLarge), bodyMedium: tall(t.bodyMedium), bodySmall: tall(t.bodySmall),
+    labelLarge: tall(t.labelLarge), labelMedium: tall(t.labelMedium), labelSmall: tall(t.labelSmall),
+  );
+}
+
 ThemeData buildAppTheme([AppIndustry industry = AppIndustry.standard]) {
   final palette = AppPalette.of(industry);
   final scheme = ColorScheme.fromSeed(seedColor: palette.primary).copyWith(
@@ -140,6 +171,7 @@ ThemeData buildAppTheme([AppIndustry industry = AppIndustry.standard]) {
     useMaterial3: true,
     colorScheme: scheme,
     extensions: [palette],
+    fontFamilyFallback: urduFontFallback,
     // Transparent: the router puts every screen on AppBackground (the industry's tint).
     scaffoldBackgroundColor: Colors.transparent,
     appBarTheme: AppBarTheme(
@@ -148,7 +180,7 @@ ThemeData buildAppTheme([AppIndustry industry = AppIndustry.standard]) {
       elevation: 0,
       scrolledUnderElevation: 0,
       centerTitle: false,
-      titleTextStyle: TextStyle(color: palette.ink, fontSize: 20, fontWeight: FontWeight.w700),
+      titleTextStyle: TextStyle(color: palette.ink, fontSize: 20, fontWeight: FontWeight.w700, fontFamilyFallback: urduFontFallback),
     ),
     cardTheme: CardThemeData(
       color: Colors.white,
@@ -163,8 +195,8 @@ ThemeData buildAppTheme([AppIndustry industry = AppIndustry.standard]) {
       selectedColor: palette.primary,
       secondarySelectedColor: palette.primary,
       checkmarkColor: Colors.white,
-      labelStyle: TextStyle(color: palette.ink),
-      secondaryLabelStyle: const TextStyle(color: Colors.white),
+      labelStyle: TextStyle(color: palette.ink, fontFamilyFallback: urduFontFallback),
+      secondaryLabelStyle: const TextStyle(color: Colors.white, fontFamilyFallback: urduFontFallback),
       side: BorderSide(color: Color.lerp(AppColors.border, palette.primary, 0.15)!),
       shape: const StadiumBorder(),
     ),
@@ -181,7 +213,7 @@ ThemeData buildAppTheme([AppIndustry industry = AppIndustry.standard]) {
       style: FilledButton.styleFrom(
         minimumSize: const Size.fromHeight(52),
         shape: rounded,
-        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600, fontFamilyFallback: urduFontFallback),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(

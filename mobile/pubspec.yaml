@@ -46,8 +46,15 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
-  # All user-facing text lives in lib/l10n/app_en.arb (section 2: i18n from day one).
+  # All user-facing text lives in lib/l10n/app_en.arb, Urdu in app_ur.arb (section 2).
   generate: true
+  # Noto Nastaliq Urdu (SIL OFL 1.1, assets/fonts/OFL.txt): the Urdu UI's script.
+  fonts:
+    - family: NotoNastaliqUrdu
+      fonts:
+        - asset: assets/fonts/NotoNastaliqUrdu-Regular.ttf
+        - asset: assets/fonts/NotoNastaliqUrdu-Bold.ttf
+          weight: 700
 
 hooks:
   user_defines:

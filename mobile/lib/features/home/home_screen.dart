@@ -7,6 +7,7 @@ import '../../core/providers.dart';
 import '../../core/sync/offline_policy.dart';
 import '../../core/sync/sync_engine.dart';
 import '../../l10n/generated/app_localizations.dart';
+import '../../shared/language_switch.dart';
 import '../../shared/theme.dart';
 import '../ordering/order_providers.dart';
 
@@ -42,10 +43,16 @@ class HomeScreen extends ConsumerWidget {
           PopupMenuButton<String>(
             onSelected: (value) => switch (value) {
               'biometric' => _toggleBiometric(context, ref),
+              'language' => switchLanguage(context, ref),
               'signOut' => _signOut(context, ref, pending),
               _ => null,
             },
             itemBuilder: (context) => [
+              PopupMenuItem(
+                key: const Key('menu-language'),
+                value: 'language',
+                child: Row(children: [const Icon(Icons.translate, size: 20), const SizedBox(width: 12), Text(otherLanguageName(context))]),
+              ),
               PopupMenuItem(value: 'biometric', child: Text(l10n.biometricUnlock)),
               PopupMenuItem(value: 'signOut', child: Text(l10n.signOut)),
             ],

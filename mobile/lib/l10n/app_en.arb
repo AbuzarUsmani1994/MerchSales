@@ -196,6 +196,27 @@
   "menuQrScanHint": "Scan with your phone camera to see our menu",
   "menuQrOffTitle": "The customer menu is off",
   "menuQrOffBody": "It isn't switched on for {branch} yet. A manager can switch it on in the back office: Branches, then Customer menu.",
-  "@menuQrOffBody": { "placeholders": { "branch": { "type": "String" } } },
-  "menuQrSyncHint": "Switched it on just now? Pull down on home to sync."
+  "@menuQrOffBody": {
+    "placeholders": {
+      "branch": {
+        "type": "String"
+      }
+    }
+  },
+  "menuQrSyncHint": "Switched it on just now? Pull down on home to sync.",
+  "language": "Language",
+  "languageEnglish": "English",
+  "languageUrdu": "اردو",
+  "errorInvalidCredentials": "Wrong company code, username or password.",
+  "errorLockedOut": "Too many wrong attempts. This account is locked for 15 minutes.",
+  "errorTenantSuspended": "This company's account isn't active. Contact your administrator.",
+  "errorNotAllowedOnMobile": "This account isn't allowed to use the mobile app.",
+  "errorUnexpected": "Something went wrong on this phone: {detail}",
+  "@errorUnexpected": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  }
 }
