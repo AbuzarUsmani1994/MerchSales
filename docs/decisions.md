@@ -2,6 +2,37 @@
 
 Short, ADR-style notes on choices that change or add to the Build Spec (CLAUDE.md). Newest first.
 
+## 2026-10-27 — Visit rewards (restaurants first)
+
+**Context.** The owner wants repeat customers rewarded without SMS (no SMS provider). A points
+wallet with a PIN was considered and dropped as harder for staff and customers; the owner chose
+a visit count instead. Loyalty is not in the Build Spec's v1 scope.
+
+**Decision.**
+- A member is a customer record plus a `sales.LoyaltyMember` row, found by mobile number
+  (normalised: 0300-1234567 = +92 300 1234567). Members are company-wide.
+- Rules (company setting, owner only; defaults agreed 2026-10-27): a paid bill of Rs 2,000 or
+  more counts as one visit, at most one per member per business day; after 5 visits the member
+  gets Rs 500 off a bill of Rs 2,500 or more; the bill that uses the reward still counts as a
+  visit; visits lapse after 6 months without one.
+- Two switches per branch, both off by default: **visit rewards on** (owner) and **cashiers can
+  add members** (owner or that branch's manager). Owners and managers can always add, pause
+  and rename members (new permission `Sales.Loyalty.Manage`); cashiers only where switched on.
+- The reward is a discount spread over the order lines (so invoices and reports show real
+  revenue), not a payment. It is a fixed company rule, so it doesn't go through the manual
+  discount limit.
+- `sales.LoyaltyVisit` is append-only (UPDATE/DELETE denied). The member row is locked during
+  payment, so two tills can't both count today's visit or both spend one reward.
+- Paid orders can't be cancelled today; when sales returns are built, a return must add
+  `VisitReversed` / `RewardReturned` rows (the kinds already exist in the table).
+- Waiters may note the customer's phone on an order (only at branches where the programme
+  runs); the cashier's screen picks it up.
+- No receipts are printed yet, so progress shows on the cashier's screen only.
+- Pharma distributors: not used (schemes and rebates fit B2B better); a pharma tenant with a
+  retail counter can switch it on like a restaurant.
+
+**Approved by** the owner (TRS), 2026-10-27. Schema: `database/scripts/015_Loyalty.sql`.
+
 ## 2026-10-27 — Urdu in the mobile app
 
 **Context.** Section 3 listed Urdu translations as out of scope for v1, while section 2 required

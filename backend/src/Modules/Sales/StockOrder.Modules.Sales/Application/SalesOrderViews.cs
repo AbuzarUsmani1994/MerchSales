@@ -39,6 +39,7 @@ public sealed record SalesOrderView(
     decimal GrandTotal,
     decimal PaidAmount,
     Guid? ClientDocumentId,
+    string? LoyaltyPhone,
     string Etag,
     IReadOnlyList<SalesOrderLineView> Lines);
 
@@ -57,6 +58,7 @@ public sealed class SalesOrderViewBuilder(SalesDbContext db, IUserDirectory user
             o.OrderDate, o.BusinessDate, o.Notes,
             o.SalesRepUserId is { } rep ? takers.GetValueOrDefault(rep) : null,
             o.SubTotal, o.DiscountTotal, o.TaxTotal, o.GrandTotal, o.PaidAmount, o.ClientDocumentId,
+            o.LoyaltyPhone is { } phone ? PhoneNumbers.Display(phone) : null,
             ETags.Format(o.RowVer),
             o.Lines.OrderBy(l => l.LineNumber).Select(l => new SalesOrderLineView(
                 l.Id, l.LineNumber, l.ProductId, names.GetValueOrDefault(l.ProductId, "Item"), l.Quantity, l.UnitPrice, l.LineTotal, l.Notes)).ToList()))

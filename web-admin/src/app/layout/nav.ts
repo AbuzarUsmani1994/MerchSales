@@ -31,6 +31,7 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'Sales',
     entries: [
       { label: 'Orders', icon: 'receipt_long', routerLink: '/sales/orders', permission: 'Sales.View' },
+      { label: 'Visit rewards', icon: 'loyalty', routerLink: '/sales/rewards', permission: 'Sales.Loyalty.Manage' },
     ],
   },
   {

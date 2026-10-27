@@ -15,6 +15,10 @@ public sealed class SalesDbContext(DbContextOptions<SalesDbContext> options, ICu
     public DbSet<SalesOrder> SalesOrders => Set<SalesOrder>();
     public DbSet<SalesOrderLine> SalesOrderLines => Set<SalesOrderLine>();
     public DbSet<Invoice> Invoices => Set<Invoice>();
+    public DbSet<LoyaltyMember> LoyaltyMembers => Set<LoyaltyMember>();
+    public DbSet<LoyaltyVisit> LoyaltyVisits => Set<LoyaltyVisit>();
+    public DbSet<LoyaltyRule> LoyaltyRules => Set<LoyaltyRule>();
+    public DbSet<LoyaltyBranch> LoyaltyBranches => Set<LoyaltyBranch>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -56,6 +60,52 @@ public sealed class CustomerConfiguration : IEntityTypeConfiguration<Customer>
         builder.MapKeys("Customer");
         builder.Property(c => c.Code).HasMaxLength(32);
         builder.Property(c => c.Name).HasMaxLength(200);
+        builder.Property(c => c.Phone).HasMaxLength(40);
+    }
+}
+
+public sealed class LoyaltyMemberConfiguration : IEntityTypeConfiguration<LoyaltyMember>
+{
+    public void Configure(EntityTypeBuilder<LoyaltyMember> builder)
+    {
+        builder.MapKeys("LoyaltyMember");
+        builder.Property(m => m.Phone).HasColumnType("varchar(15)");
+        builder.Property(m => m.Status).HasColumnType("varchar(10)");
+    }
+}
+
+/// <summary>Append-only: no RowVer column; rows are only ever added.</summary>
+public sealed class LoyaltyVisitConfiguration : IEntityTypeConfiguration<LoyaltyVisit>
+{
+    public void Configure(EntityTypeBuilder<LoyaltyVisit> builder)
+    {
+        builder.MapKeys("LoyaltyVisit", hasRowVersion: false);
+        builder.Property(v => v.Kind).HasColumnType("varchar(16)");
+        builder.Property(v => v.BillAmount).Money();
+        builder.Property(v => v.RewardAmount).HasPrecision(19, 4);
+    }
+}
+
+public sealed class LoyaltyRuleConfiguration : IEntityTypeConfiguration<LoyaltyRule>
+{
+    public void Configure(EntityTypeBuilder<LoyaltyRule> builder)
+    {
+        builder.ToTable("LoyaltyRule");
+        builder.HasKey(r => r.TenantId);
+        builder.Property(r => r.MinVisitBill).Money();
+        builder.Property(r => r.RewardAmount).Money();
+        builder.Property(r => r.MinRewardBill).Money();
+        builder.Property(r => r.RowVer).IsRowVersion();
+    }
+}
+
+public sealed class LoyaltyBranchConfiguration : IEntityTypeConfiguration<LoyaltyBranch>
+{
+    public void Configure(EntityTypeBuilder<LoyaltyBranch> builder)
+    {
+        builder.ToTable("LoyaltyBranch");
+        builder.HasKey(b => new { b.TenantId, b.BranchId });
+        builder.Property(b => b.RowVer).IsRowVersion();
     }
 }
 
@@ -78,6 +128,7 @@ public sealed class SalesOrderConfiguration : IEntityTypeConfiguration<SalesOrde
         builder.Property(o => o.PaidAmount).Money();
         builder.Property(o => o.BackOrderPolicy).HasColumnType("varchar(20)");
         builder.Property(o => o.Notes).HasMaxLength(1000);
+        builder.Property(o => o.LoyaltyPhone).HasColumnType("varchar(15)");
         builder.Property(o => o.CancelNotes).HasMaxLength(500);
 
         builder.HasMany(o => o.Lines).WithOne().HasForeignKey(l => l.SalesOrderId);

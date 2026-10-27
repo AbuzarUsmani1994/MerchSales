@@ -46,7 +46,8 @@ internal sealed class CreateSalesOrderSyncHandler(IMediator mediator) : ISyncCom
             body.Lines.Select(l => new CreateSalesOrderLine(l.ProductId, l.Quantity, l.Notes)).ToList(),
             ClientDocumentId: id,
             SourceDeviceId: context.DeviceId,
-            DeviceDocumentNo: body.DeviceDocumentNo), ct);
+            DeviceDocumentNo: body.DeviceDocumentNo,
+            CustomerPhone: body.CustomerPhone), ct);
 
         if (result.IsFailure)
         {
@@ -64,7 +65,7 @@ internal sealed class CreateSalesOrderSyncHandler(IMediator mediator) : ISyncCom
         });
     }
 
-    private sealed record Payload(Guid Id, Guid BranchId, string? Channel, string? Notes, string? DeviceDocumentNo, List<PayloadLine>? Lines);
+    private sealed record Payload(Guid Id, Guid BranchId, string? Channel, string? Notes, string? DeviceDocumentNo, List<PayloadLine>? Lines, string? CustomerPhone);
 
     private sealed record PayloadLine(Guid ProductId, decimal Quantity, string? Notes);
 }
@@ -132,4 +133,42 @@ internal sealed class OpenOrdersSyncSource(
 
     private sealed record LineRow(
         Guid SalesOrderId, int LineNumber, Guid ProductId, decimal Quantity, decimal UnitPrice, decimal LineTotal, string? Notes);
+}
+
+/// <summary>
+/// Entity "loyaltyBranches": whether visit rewards are on at each of the user's branches, so the
+/// waiter's phone only offers the customer-phone field where the programme runs.
+/// </summary>
+internal sealed class LoyaltyBranchesSyncSource(IUnitOfWork unitOfWork, ICurrentUserContext currentUser, IAccessScope accessScope) : ISyncSource
+{
+    public string Entity => "loyaltyBranches";
+
+    public async Task<SyncEntityPage> PullAsync(SyncPullRequest request, CancellationToken ct)
+    {
+        var scope = BranchScope.For(await accessScope.GetGrantsAsync(ct), null);
+        var parameters = new DynamicParameters();
+        parameters.Add("tenantId", currentUser.TenantId);
+        parameters.Add("limit", request.Limit);
+        parameters.Add("after", RowVersionToken.ToBinary(RowVersionToken.Parse(request.Token)), System.Data.DbType.Binary, size: 8);
+        parameters.Add("upper", RowVersionToken.ToBinary(request.UpperRowVersion), System.Data.DbType.Binary, size: 8);
+        parameters.Add("allBranches", scope.AllBranches);
+        parameters.Add("branchIds", scope.BranchIds.Count > 0 ? scope.BranchIds.ToArray() : [Guid.Empty]);
+
+        var rows = (await unitOfWork.Connection.QueryAsync<Row>(new CommandDefinition(
+            """
+            SELECT TOP (@limit) BranchId, IsEnabled, RowVer
+            FROM sales.LoyaltyBranch
+            WHERE TenantId = @tenantId AND RowVer > @after AND RowVer < @upper
+              AND (@allBranches = 1 OR BranchId IN @branchIds)
+            ORDER BY RowVer;
+            """, parameters, unitOfWork.Transaction, cancellationToken: ct))).ToList();
+
+        var versions = rows.Select(r => RowVersionToken.FromBinary(r.RowVer)).ToList();
+        return new SyncEntityPage(
+            rows.Select(r => (object)new { r.BranchId, r.IsEnabled }).ToList(),
+            RowVersionToken.Next(versions, request.Limit, request.UpperRowVersion),
+            HasMore: rows.Count >= request.Limit);
+    }
+
+    private sealed record Row(Guid BranchId, bool IsEnabled, byte[] RowVer);
 }

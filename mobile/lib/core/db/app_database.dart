@@ -43,6 +43,9 @@ class MenuEntry {
 /// Local copy of pulled entities plus the offline outbox (section 14). Every screen reads
 /// from here; the sync engine is the only thing that talks to the server about this data.
 
+/// Local setting holding whether visit rewards run at a branch (pull entity "loyaltyBranches").
+String loyaltyEnabledKey(String branchId) => 'Loyalty.Enabled.$branchId';
+
 /// tenancy.TenantSetting rows (pull entity "settings").
 class LocalSettings extends Table {
   TextColumn get key => text()();
@@ -423,6 +426,12 @@ class AppDatabase extends _$AppDatabase {
         b.insertAllOnConflictUpdate(
           localSettings,
           settings.map((s) => LocalSettingsCompanion.insert(key: s.key, value: s.value)),
+        );
+        // Entity "loyaltyBranches": kept as a setting per branch (visit rewards on or off there).
+        b.insertAllOnConflictUpdate(
+          localSettings,
+          (rows['loyaltyBranches'] ?? const <Map<String, dynamic>>[]).map((r) => LocalSettingsCompanion.insert(
+              key: loyaltyEnabledKey(r['branchId'] as String), value: '${r['isEnabled'] == true}')),
         );
         b.insertAllOnConflictUpdate(
           localFeatures,

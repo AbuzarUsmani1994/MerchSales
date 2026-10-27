@@ -14,8 +14,11 @@ public static class SalesModule
         services.AddModuleDbContext<SalesDbContext>(
             (sp, options) => new SalesDbContext(options, sp.GetRequiredService<ICurrentUserContext>()));
         services.AddScoped<SalesOrderViewBuilder>();
+        services.AddScoped<LoyaltyStore>();
+        services.AddScoped<LoyaltyCheckout>();
         services.AddScoped<ISyncCommandHandler, CreateSalesOrderSyncHandler>();
         services.AddScoped<ISyncSource, OpenOrdersSyncSource>();
+        services.AddScoped<ISyncSource, LoyaltyBranchesSyncSource>();
         return services;
     }
 }

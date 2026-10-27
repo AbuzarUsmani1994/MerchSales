@@ -108,11 +108,12 @@ public sealed class InvoiceLine : TenantEntity
         };
 }
 
-/// <summary>sales.Customer — read here for the walk-in customer and price lists; managed in a later step.</summary>
+/// <summary>sales.Customer — the walk-in customer and price lists, and visit-reward members (015_Loyalty).</summary>
 public sealed class Customer : TenantEntity
 {
     public string Code { get; private set; } = string.Empty;
     public string Name { get; private set; } = string.Empty;
+    public string? Phone { get; private set; }
     public Guid? PriceListId { get; private set; }
     public bool IsWalkIn { get; private set; }
     public bool IsActive { get; private set; } = true;
@@ -120,4 +121,16 @@ public sealed class Customer : TenantEntity
     private Customer()
     {
     }
+
+    /// <summary>A member's customer record: code "M" + the phone digits, named after the person (or the number).</summary>
+    public static Customer ForMember(Guid tenantId, Guid id, string phone, string? name) => new()
+    {
+        TenantId = tenantId,
+        Id = id,
+        Code = "M" + phone,
+        Name = string.IsNullOrWhiteSpace(name) ? PhoneNumbers.Display(phone) : name.Trim(),
+        Phone = phone,
+    };
+
+    public void Rename(string name) => Name = name.Trim();
 }

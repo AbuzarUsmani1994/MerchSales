@@ -12,6 +12,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { ConfigService } from '../../core/config.service';
 import { CashSession, CompletedSale, PaymentMethod, SalesOrder } from './sales.models';
+import { LoyaltyChoice, LoyaltyPanelComponent } from './loyalty-panel.component';
 
 function problemMessage(error: unknown): string {
   return error instanceof HttpErrorResponse ? (error.error?.detail ?? error.error?.title ?? 'Something went wrong.') : 'Something went wrong.';
@@ -29,7 +30,7 @@ export interface PaymentDialogData {
 @Component({
   selector: 'app-payment-dialog',
   standalone: true,
-  imports: [ReactiveFormsModule, DecimalPipe, MatDialogModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatInputModule, MatIconModule],
+  imports: [ReactiveFormsModule, DecimalPipe, MatDialogModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatInputModule, MatIconModule, LoyaltyPanelComponent],
   template: `
     <h2 mat-dialog-title>Take payment · {{ data.order.documentNo }}</h2>
     <mat-dialog-content>
@@ -41,12 +42,29 @@ export interface PaymentDialogData {
             <div class="change">Give back <strong>{{ sale.change | number: '1.0-2' }}</strong></div>
           }
           <div class="muted">Invoice {{ sale.invoiceNo }}@if (sale.paymentNo) { · Receipt {{ sale.paymentNo }} }</div>
+          @if (sale.loyalty; as l) {
+            <div class="loyalty-done">
+              <mat-icon>loyalty</mat-icon>
+              <span>
+                <strong>{{ l.name ?? l.phone }}</strong>
+                @if (l.rewardUsed) { · Reward used (Rs {{ l.rewardAmount | number: '1.0-0' }} off) }
+                @if (l.visitCounted) { · Visit counted }
+                · {{ l.visits }} of {{ l.visitsForReward }} visits@if (l.rewardAvailable) { · Reward ready next time }
+                @if (l.message) { <br /><span class="muted">{{ l.message }}</span> }
+              </span>
+            </div>
+          }
         </div>
       } @else {
         <div class="total-row">
           <span>{{ data.order.notes || 'Walk-in' }}</span>
-          <span class="total">PKR {{ data.order.grandTotal | number: '1.0-2' }}</span>
+          <span class="total">
+            @if (reward() > 0) { <s class="was">{{ data.order.grandTotal | number: '1.0-2' }}</s> }
+            PKR {{ total() | number: '1.0-2' }}
+          </span>
         </div>
+        <app-loyalty-panel [branchId]="data.order.branchId" [total]="data.order.grandTotal"
+                           [initialPhone]="data.order.loyaltyPhone" (changed)="loyaltyChanged($event)" />
         <form [formGroup]="form">
           <mat-button-toggle-group formControlName="methodId" class="methods" aria-label="Payment method">
             @for (m of data.methods; track m.id) {
@@ -106,6 +124,9 @@ export interface PaymentDialogData {
     .done-title { font-size: 1.15rem; font-weight: 600; margin: 0.5rem 0; }
     .done .change { margin-bottom: 0.5rem; }
     .callout-danger { background: var(--so-danger-soft); color: var(--so-danger); margin-top: 0.75rem; }
+    .was { color: var(--so-text-muted); font-size: 1rem; font-weight: 400; margin-right: 0.4rem; }
+    .loyalty-done { display: flex; gap: 0.4rem; align-items: flex-start; justify-content: center; margin-top: 0.75rem; text-align: left; }
+    .loyalty-done .mat-icon { color: var(--so-accent); }
   `,
 })
 export class PaymentDialogComponent {
@@ -125,17 +146,31 @@ export class PaymentDialogComponent {
   readonly busy = signal(false);
   readonly error = signal<string | null>(null);
   readonly done = signal<CompletedSale | null>(null);
+  readonly loyalty = signal<LoyaltyChoice>({ phone: null, useReward: false, rewardAmount: 0 });
+
+  /** The visit reward comes off the bill before payment; the server checks it again. */
+  readonly reward = computed(() => (this.loyalty().useReward ? Math.min(this.loyalty().rewardAmount, this.data.order.grandTotal) : 0));
+  readonly total = computed(() => this.data.order.grandTotal - this.reward());
 
   readonly isCash = computed(() => this.data.methods.find((m) => m.id === this.value().methodId)?.kind === 'Cash');
-  readonly change = computed(() => Number(this.value().tendered ?? 0) - this.data.order.grandTotal);
+  readonly change = computed(() => Number(this.value().tendered ?? 0) - this.total());
   readonly canPay = computed(() => !!this.value().methodId && (!this.isCash() || this.change() >= 0));
 
   /** Exact, then the next round notes a customer is likely to hand over. */
   readonly quickAmounts = computed(() => {
-    const total = this.data.order.grandTotal;
+    const total = this.total();
     const ups = [100, 500, 1000, 5000].map((step) => Math.ceil(total / step) * step);
     return [...new Set([total, ...ups])].filter((a) => a >= total).slice(0, 4);
   });
+
+  loyaltyChanged(choice: LoyaltyChoice): void {
+    const before = this.total();
+    this.loyalty.set(choice);
+    // Keep "cash received" in step when it was simply the exact total.
+    if (Number(this.form.controls.tendered.value) === before) {
+      this.form.controls.tendered.setValue(this.total());
+    }
+  }
 
   async pay(): Promise<void> {
     const v = this.form.getRawValue();
@@ -149,6 +184,8 @@ export class PaymentDialogComponent {
             paymentMethodId: v.methodId,
             amountTendered: this.isCash() ? Number(v.tendered) : null,
             reference: this.isCash() ? null : v.reference.trim() || null,
+            loyaltyPhone: this.loyalty().phone,
+            useReward: this.loyalty().useReward,
           },
           { headers: new HttpHeaders({ 'If-Match': `"${this.data.order.etag}"` }) },
         ),

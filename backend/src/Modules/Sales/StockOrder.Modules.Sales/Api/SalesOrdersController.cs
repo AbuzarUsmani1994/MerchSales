@@ -44,7 +44,7 @@ public sealed class SalesOrdersController(IMediator mediator) : ControllerBase
         return result.ToActionResult();
     }
 
-    public sealed record CreateSalesOrderRequest(Guid BranchId, string? Channel, string? Notes, IReadOnlyList<CreateSalesOrderLine> Lines);
+    public sealed record CreateSalesOrderRequest(Guid BranchId, string? Channel, string? Notes, IReadOnlyList<CreateSalesOrderLine> Lines, string? CustomerPhone);
 
     [HttpPost]
     [Authorize(Policy = SalesPermissions.OrderCreate)]
@@ -52,9 +52,10 @@ public sealed class SalesOrdersController(IMediator mediator) : ControllerBase
     [Idempotent]
     public async Task<IActionResult> Create(CreateSalesOrderRequest request, CancellationToken ct) =>
         (await mediator.Send(new CreateSalesOrderCommand(
-            request.BranchId, request.Channel ?? SalesChannels.BackOffice, request.Notes, request.Lines ?? []), ct)).ToActionResult();
+            request.BranchId, request.Channel ?? SalesChannels.BackOffice, request.Notes, request.Lines ?? [],
+            CustomerPhone: request.CustomerPhone), ct)).ToActionResult();
 
-    public sealed record CompleteSalesOrderRequest(Guid PaymentMethodId, decimal? AmountTendered, string? Reference);
+    public sealed record CompleteSalesOrderRequest(Guid PaymentMethodId, decimal? AmountTendered, string? Reference, string? LoyaltyPhone, bool UseReward);
 
     [HttpPost("{orderId:guid}/complete")]
     [Authorize(Policy = SalesPermissions.OrderFulfil)]
@@ -68,7 +69,8 @@ public sealed class SalesOrdersController(IMediator mediator) : ControllerBase
         }
 
         return (await mediator.Send(new CompleteSalesOrderCommand(
-            orderId, Request.Headers.IfMatch.ToString(), request.PaymentMethodId, request.AmountTendered, request.Reference), ct)).ToActionResult();
+            orderId, Request.Headers.IfMatch.ToString(), request.PaymentMethodId, request.AmountTendered, request.Reference,
+            request.LoyaltyPhone, request.UseReward), ct)).ToActionResult();
     }
 
     public sealed record CancelSalesOrderRequest(string Reason);

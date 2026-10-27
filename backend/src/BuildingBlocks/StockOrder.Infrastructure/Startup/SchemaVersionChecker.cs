@@ -26,6 +26,7 @@ public static class SchemaVersionChecker
         "012_Hangfire",
         "013_SelfServicePermission",
         "014_BranchCatalog",
+        "015_Loyalty",
     ];
 
     public static async Task EnsureAppliedAsync(IOptions<DatabaseOptions> options, CancellationToken ct)

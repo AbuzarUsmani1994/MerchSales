@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../core/db/app_database.dart';
 import '../../core/providers.dart';
 import '../../core/sync/offline_policy.dart';
+import 'phone_numbers.dart';
 
 /// Branches this user takes orders at.
 final orderBranchesProvider = StreamProvider<List<LocalBranch>>((ref) => ref.watch(databaseProvider).watchOrderBranches());
@@ -49,9 +50,12 @@ class CartLine {
 }
 
 class Cart {
-  const Cart({this.lines = const [], this.label = ''});
+  const Cart({this.lines = const [], this.label = '', this.phone = ''});
 
   final List<CartLine> lines;
+
+  /// A visit-reward member's phone, for the cashier (only where the programme runs).
+  final String phone;
 
   /// Who the order is for ("Table 4"); goes to the order's Notes.
   final String label;
@@ -86,12 +90,15 @@ class CartController extends Notifier<Cart> {
 
   void remove(MenuEntry item) => _setQuantity(item, state.quantityOf(item.productId) - 1);
 
+  void setPhone(String phone) => state = Cart(lines: state.lines, label: state.label, phone: phone);
+
   void setNote(String productId, String note) => state = Cart(
         label: state.label,
+        phone: state.phone,
         lines: [for (final l in state.lines) l.item.productId == productId ? CartLine(item: l.item, quantity: l.quantity, note: note) : l],
       );
 
-  void setLabel(String label) => state = Cart(lines: state.lines, label: label);
+  void setLabel(String label) => state = Cart(lines: state.lines, label: label, phone: state.phone);
 
   void clear() => state = const Cart();
 
@@ -105,7 +112,7 @@ class CartController extends Notifier<Cart> {
     } else {
       lines.add(CartLine(item: item, quantity: quantity));
     }
-    state = Cart(lines: lines, label: state.label);
+    state = Cart(lines: lines, label: state.label, phone: state.phone);
   }
 
   /// Saves the order and its CreateSalesOrder command locally (section 14) and asks for a sync.
@@ -148,6 +155,7 @@ class CartController extends Notifier<Cart> {
         'branchId': branch.id,
         'channel': 'DineIn',
         'notes': label.isEmpty ? null : label,
+        if (await loyaltyEnabledAt(db, branch.id) && normalizePhone(state.phone) != null) 'customerPhone': state.phone.trim(),
         'lines': [
           for (final l in lines) {'productId': l.item.productId, 'quantity': l.quantity, 'notes': (l.note ?? '').trim().isEmpty ? null : l.note!.trim()},
         ],
@@ -161,3 +169,12 @@ class CartController extends Notifier<Cart> {
 }
 
 final cartProvider = NotifierProvider<CartController, Cart>(CartController.new);
+
+Future<bool> loyaltyEnabledAt(AppDatabase db, String branchId) async => await db.readSetting(loyaltyEnabledKey(branchId)) == 'true';
+
+/// Whether visit rewards run at the phone's branch: the order screen then asks for the customer's phone.
+final loyaltyEnabledProvider = StreamProvider<bool>((ref) {
+  final branch = ref.watch(orderBranchProvider);
+  if (branch == null) return Stream.value(false);
+  return ref.watch(databaseProvider).watchSetting(loyaltyEnabledKey(branch.id)).map((v) => v == 'true');
+});

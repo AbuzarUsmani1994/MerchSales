@@ -13,6 +13,7 @@ import 'package:stockorder_mobile/core/session/session_controller.dart';
 import 'package:stockorder_mobile/features/ordering/cart_screen.dart';
 import 'package:stockorder_mobile/features/ordering/menu_screen.dart';
 import 'package:stockorder_mobile/features/ordering/orders_screen.dart';
+import 'package:stockorder_mobile/features/ordering/phone_numbers.dart';
 import 'package:stockorder_mobile/l10n/generated/app_localizations.dart';
 import 'package:stockorder_mobile/shared/theme.dart';
 
@@ -178,7 +179,59 @@ void main() {
     expect(await real(tester, db.pendingCommands), isEmpty);
     await unmount(tester);
   });
+
+  test('phone numbers are matched however they are typed (same rules as the server)', () {
+    for (final typed in ['03001234567', '0300-1234567', '+92 300 1234567', '00923001234567', '3001234567']) {
+      expect(normalizePhone(typed), '923001234567', reason: typed);
+    }
+    for (final bad in ['', '12345', '0300123456', 'ali@x.com']) {
+      expect(normalizePhone(bad), isNull, reason: bad);
+    }
+  });
+
+  testWidgets('where visit rewards run, the waiter can note the customer phone for the cashier', (tester) async {
+    await real(tester, () => db.writeMeta(SyncMetaKeys.lastSuccessfulSyncAtUtc, DateTime.now().toUtc().toIso8601String()));
+
+    Future<void> toCart() async {
+      await tester.tap(find.byKey(const Key('add-tikka')));
+      await settle(tester);
+      await tester.tap(find.textContaining('View order'));
+      await settle(tester);
+    }
+
+    // Programme off at Lake City: no phone field at all.
+    await tester.pumpWidget(app());
+    await settle(tester);
+    await toCart();
+    expect(find.byKey(const Key('order-phone')), findsNothing);
+    await unmount(tester);
+
+    await real(tester, () => db.applyPull(tokens: const {}, settings: const [], features: const [], permissions: null, rows: {
+          'loyaltyBranches': [
+            {'branchId': lkc, 'isEnabled': true},
+          ],
+        }));
+    await tester.pumpWidget(app());
+    await settle(tester);
+    await toCart();
+    expect(find.byKey(const Key('order-phone')), findsOneWidget);
+
+    await tester.enterText(find.byKey(const Key('order-label')), 'Table 2');
+    await tester.enterText(find.byKey(const Key('order-phone')), '0300 12');
+    await tester.tap(find.byKey(const Key('send-order')));
+    await settle(tester);
+    expect(find.textContaining('like 0300 1234567'), findsOneWidget);
+    expect(await real(tester, db.pendingCommands), isEmpty, reason: 'a half-typed number stops the order until fixed or cleared');
+
+    await tester.enterText(find.byKey(const Key('order-phone')), '0300-1234567');
+    await tester.tap(find.byKey(const Key('send-order')));
+    await settle(tester);
+    final payload = jsonDecode((await real(tester, db.pendingCommands)).single.payloadJson) as Map<String, dynamic>;
+    expect(payload['customerPhone'], '0300-1234567');
+    await unmount(tester);
+  });
 }
+
 
 class _SignedInSession extends SessionController {
   @override
@@ -189,4 +242,5 @@ class _SignedInSession extends SessionController {
           mustChangePassword: false,
         ),
       );
+
 }

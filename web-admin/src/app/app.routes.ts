@@ -49,6 +49,11 @@ export const routes: Routes = [
         canActivate: [permissionGuard('Sales.View')],
       },
       {
+        path: 'sales/rewards',
+        loadComponent: () => import('./features/sales/rewards.component').then((m) => m.RewardsComponent),
+        canActivate: [permissionGuard('Sales.Loyalty.Manage')],
+      },
+      {
         path: 'catalog/menu',
         loadComponent: () => import('./features/catalog/menu.component').then((m) => m.MenuComponent),
         canActivate: [permissionGuard('Catalog.View')],

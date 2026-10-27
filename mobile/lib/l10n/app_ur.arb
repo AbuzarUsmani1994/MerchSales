@@ -124,5 +124,8 @@
   "errorLockedOut": "بہت زیادہ غلط کوششیں۔ یہ اکاؤنٹ 15 منٹ کے لیے بند ہے۔",
   "errorTenantSuspended": "اس کمپنی کا اکاؤنٹ فعال نہیں ہے۔ اپنے ایڈمنسٹریٹر سے رابطہ کریں۔",
   "errorNotAllowedOnMobile": "اس اکاؤنٹ کو موبائل ایپ استعمال کرنے کی اجازت نہیں۔",
-  "errorUnexpected": "اس فون پر کوئی مسئلہ پیش آیا: {detail}"
+  "errorUnexpected": "اس فون پر کوئی مسئلہ پیش آیا: {detail}",
+  "customerPhone": "گاہک کا فون (وزٹ ریوارڈ)",
+  "customerPhoneHint": "اختیاری · مثلاً 0300 1234567",
+  "customerPhoneInvalid": "0300 1234567 جیسا موبائل نمبر لکھیں، یا خالی چھوڑ دیں۔"
 }

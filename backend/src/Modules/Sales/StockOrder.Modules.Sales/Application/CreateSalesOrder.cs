@@ -26,6 +26,8 @@ public sealed record CreateSalesOrderLine(Guid ProductId, decimal Quantity, stri
 /// </summary>
 /// <param name="ClientDocumentId">The phone's id for the order; a second create with the same id returns the first order.</param>
 /// <param name="Notes">Who the order is for, e.g. "Table 4" or "Ali, takeaway".</param>
+/// <param name="CustomerPhone">A visit-reward member's phone, noted for the cashier. A number that
+/// isn't a usable phone is dropped rather than refusing the order (it may come from a phone offline).</param>
 public sealed record CreateSalesOrderCommand(
     Guid BranchId,
     string Channel,
@@ -33,7 +35,8 @@ public sealed record CreateSalesOrderCommand(
     IReadOnlyList<CreateSalesOrderLine> Lines,
     Guid? ClientDocumentId = null,
     Guid? SourceDeviceId = null,
-    string? DeviceDocumentNo = null) : ICommand<Result<SalesOrderView>>;
+    string? DeviceDocumentNo = null,
+    string? CustomerPhone = null) : ICommand<Result<SalesOrderView>>;
 
 public sealed class CreateSalesOrderCommandValidator : AbstractValidator<CreateSalesOrderCommand>
 {
@@ -118,6 +121,7 @@ public sealed class CreateSalesOrderCommandHandler(
         var order = SalesOrder.CreateDraft(
             tenantId, idGenerator.NewId(), command.Channel, walkIn.Id, command.BranchId, warehouseId, businessDate,
             command.Notes, command.ClientDocumentId, command.SourceDeviceId, command.DeviceDocumentNo, currentUser.UserId, now);
+        order.NoteLoyaltyPhone(PhoneNumbers.Normalize(command.CustomerPhone));
         for (var i = 0; i < command.Lines.Count; i++)
         {
             var line = command.Lines[i];

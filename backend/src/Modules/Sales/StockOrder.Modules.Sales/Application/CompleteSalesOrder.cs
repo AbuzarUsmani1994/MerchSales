@@ -25,11 +25,15 @@ namespace StockOrder.Modules.Sales.Application;
 /// </summary>
 /// <param name="ExpectedETag">If-Match from the client; null skips the check (only for sync commands).</param>
 /// <param name="AmountTendered">Cash handed over; at least the total. Ignored for card/wallet (exact amount).</param>
+/// <param name="LoyaltyPhone">A visit-reward member's phone: the visit counts and the order becomes theirs.</param>
+/// <param name="UseReward">Take the member's reward off this bill (it must be ready and the bill big enough).</param>
 public sealed record CompleteSalesOrderCommand(
-    Guid OrderId, string? ExpectedETag, Guid PaymentMethodId, decimal? AmountTendered, string? Reference)
+    Guid OrderId, string? ExpectedETag, Guid PaymentMethodId, decimal? AmountTendered, string? Reference,
+    string? LoyaltyPhone = null, bool UseReward = false)
     : ICommand<Result<CompletedSale>>;
 
-public sealed record CompletedSale(SalesOrderView Order, string InvoiceNo, string? PaymentNo, string? PaymentMethod, decimal AmountPaid, decimal Change);
+public sealed record CompletedSale(
+    SalesOrderView Order, string InvoiceNo, string? PaymentNo, string? PaymentMethod, decimal AmountPaid, decimal Change, LoyaltyOutcome? Loyalty);
 
 public sealed class CompleteSalesOrderCommandValidator : AbstractValidator<CompleteSalesOrderCommand>
 {
@@ -39,6 +43,7 @@ public sealed class CompleteSalesOrderCommandValidator : AbstractValidator<Compl
         RuleFor(c => c.PaymentMethodId).NotEmpty();
         RuleFor(c => c.AmountTendered).GreaterThanOrEqualTo(0).PrecisionScale(19, 2, ignoreTrailingZeros: true);
         RuleFor(c => c.Reference).MaximumLength(100);
+        RuleFor(c => c.LoyaltyPhone).MaximumLength(30);
     }
 }
 
@@ -53,6 +58,7 @@ public sealed class CompleteSalesOrderCommandHandler(
     INumberSeriesService numberSeries,
     IOutboxWriter outbox,
     SalesOrderViewBuilder views,
+    LoyaltyCheckout loyalty,
     IClock clock,
     IIdGenerator idGenerator)
     : ICommandHandler<CompleteSalesOrderCommand, Result<CompletedSale>>
@@ -111,6 +117,13 @@ public sealed class CompleteSalesOrderCommandHandler(
             return Fail(periodCheck.Error);
         }
 
+        // Visit rewards: the reward (a discount) and the member's customer record go on before the invoice.
+        var loyaltyCheck = await loyalty.PrepareAsync(order, command.LoyaltyPhone, command.UseReward, businessDate, ct);
+        if (loyaltyCheck.IsFailure)
+        {
+            return Fail(loyaltyCheck.Error);
+        }
+
         var now = clock.UtcNow;
         var userId = currentUser.UserId;
         foreach (var status in new[] { SalesOrderStatus.Dispatched, SalesOrderStatus.Delivered })
@@ -164,6 +177,7 @@ public sealed class CompleteSalesOrderCommandHandler(
 
         order.MoveTo(SalesOrderStatus.Paid, userId, now);
         order.MoveTo(SalesOrderStatus.Closed, userId, now);
+        var loyaltyOutcome = loyaltyCheck.Value is { } prepared ? loyalty.Record(prepared, order, businessDate) : null;
         await db.SaveChangesAsync(ct);
 
         foreach (var status in new[] { SalesOrderStatus.Dispatched, SalesOrderStatus.Delivered, SalesOrderStatus.Invoiced, SalesOrderStatus.Paid, SalesOrderStatus.Closed })
@@ -172,7 +186,7 @@ public sealed class CompleteSalesOrderCommandHandler(
         }
 
         return Result.Success(new CompletedSale(
-            await views.BuildAsync(tenantId, order.Id, ct), invoiceNo, paymentNo, methodName, order.PaidAmount, change));
+            await views.BuildAsync(tenantId, order.Id, ct), invoiceNo, paymentNo, methodName, order.PaidAmount, change, loyaltyOutcome));
     }
 
     private static Result<CompletedSale> Fail(Error error) => Result.Failure<CompletedSale>(error);

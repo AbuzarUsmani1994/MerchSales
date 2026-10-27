@@ -64,7 +64,7 @@
         "Purchasing.Receipt.Post", "Purchasing.Return.Post",
         "Sales.View", "Sales.Customer.Manage", "Sales.Order.Create", "Sales.Order.Confirm", "Sales.Order.Fulfil",
         "Sales.Order.Cancel", "Sales.Price.Override", "Sales.Discount.Apply", "Sales.Credit.Override",
-        "Sales.Invoice.Post", "Sales.Invoice.Cancel", "Sales.Return.Post",
+        "Sales.Invoice.Post", "Sales.Invoice.Cancel", "Sales.Return.Post", "Sales.Loyalty.Manage",
         "Finance.Payment.Receive", "Finance.Payment.Make", "Finance.CashSession.Operate", "Finance.CashSession.Close",
         "Finance.Ledger.View", "Finance.Period.Close",
         "Reports.Stock.View", "Reports.Sales.View", "Reports.Purchasing.View", "Reports.Financial.View", "Reports.Export",

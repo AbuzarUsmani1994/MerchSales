@@ -218,5 +218,8 @@
         "type": "String"
       }
     }
-  }
+  },
+  "customerPhone": "Customer phone (visit rewards)",
+  "customerPhoneHint": "Optional · e.g. 0300 1234567",
+  "customerPhoneInvalid": "Enter a mobile number like 0300 1234567, or leave it empty."
 }

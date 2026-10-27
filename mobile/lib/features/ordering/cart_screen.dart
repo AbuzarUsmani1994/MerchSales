@@ -6,6 +6,7 @@ import '../../l10n/generated/app_localizations.dart';
 import '../../shared/theme.dart';
 import 'menu_screen.dart';
 import 'order_providers.dart';
+import 'phone_numbers.dart';
 import 'product_image.dart';
 
 /// Review the order, say who it's for, and send it to the cashier.
@@ -17,13 +18,24 @@ class CartScreen extends ConsumerStatefulWidget {
 }
 
 class _CartScreenState extends ConsumerState<CartScreen> {
-  late final TextEditingController _label = TextEditingController(text: ref.read(cartProvider).label);
+  // Created up front: a lazily created controller would first be touched in dispose(), where ref can't be read.
+  late final TextEditingController _label;
+  late final TextEditingController _phone;
   bool _showLabelError = false;
   bool _sending = false;
 
   @override
+  void initState() {
+    super.initState();
+    final cart = ref.read(cartProvider);
+    _label = TextEditingController(text: cart.label);
+    _phone = TextEditingController(text: cart.phone);
+  }
+
+  @override
   void dispose() {
     _label.dispose();
+    _phone.dispose();
     super.dispose();
   }
 
@@ -49,6 +61,24 @@ class _CartScreenState extends ConsumerState<CartScreen> {
                 ),
                 onChanged: controller.setLabel,
               ),
+              if (ref.watch(loyaltyEnabledProvider).value ?? false) ...[
+                const SizedBox(height: 12),
+                TextField(
+                  key: const Key('order-phone'),
+                  controller: _phone,
+                  keyboardType: TextInputType.phone,
+                  decoration: InputDecoration(
+                    labelText: l10n.customerPhone,
+                    hintText: l10n.customerPhoneHint,
+                    prefixIcon: const Icon(Icons.loyalty_outlined),
+                    errorText: _phoneInvalid ? l10n.customerPhoneInvalid : null,
+                  ),
+                  onChanged: (value) {
+                    controller.setPhone(value);
+                    if (_phoneInvalid) setState(() {});
+                  },
+                ),
+              ],
               const SizedBox(height: 16),
               for (final line in cart.lines)
                 Card(
@@ -129,10 +159,21 @@ class _CartScreenState extends ConsumerState<CartScreen> {
     if (note != null) ref.read(cartProvider.notifier).setNote(line.item.productId, note);
   }
 
+  bool _showPhoneError = false;
+
+  /// A typed phone that isn't a usable mobile number (an empty one is fine: it's optional).
+  bool get _phoneInvalid => _showPhoneError && _phone.text.trim().isNotEmpty && normalizePhone(_phone.text) == null;
+
   Future<void> _send() async {
     final l10n = AppLocalizations.of(context);
     if (_label.text.trim().isEmpty) {
       setState(() => _showLabelError = true);
+      return;
+    }
+
+    final loyaltyOn = ref.read(loyaltyEnabledProvider).value ?? false;
+    if (loyaltyOn && _phone.text.trim().isNotEmpty && normalizePhone(_phone.text) == null) {
+      setState(() => _showPhoneError = true);
       return;
     }
 

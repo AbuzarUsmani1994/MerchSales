@@ -27,6 +27,8 @@ export interface SalesOrder {
   taxTotal: number;
   grandTotal: number;
   paidAmount: number;
+  /** A visit-reward member's phone the waiter noted ("0300 1234567"). */
+  loyaltyPhone: string | null;
   etag: string;
   lines: SalesOrderLine[];
 }
@@ -68,4 +70,77 @@ export interface CompletedSale {
   paymentMethod: string | null;
   amountPaid: number;
   change: number;
+  loyalty: LoyaltyOutcome | null;
+}
+
+export interface LoyaltyRules {
+  visitsForReward: number;
+  minVisitBill: number;
+  rewardAmount: number;
+  minRewardBill: number;
+  expiryMonths: number;
+}
+
+/** Visit rewards at the till's branch, before any phone is typed. */
+export interface LoyaltyBranchStatus {
+  programmeOn: boolean;
+  canAddMember: boolean;
+  rules: LoyaltyRules;
+}
+
+export interface LoyaltyLookup {
+  phone: string;
+  programmeOn: boolean;
+  isMember: boolean;
+  memberId: string | null;
+  name: string | null;
+  status: string | null;
+  visits: number;
+  visitsForReward: number;
+  rewardAvailable: boolean;
+  countedToday: boolean;
+  rewardAmount: number;
+  minRewardBill: number;
+  minVisitBill: number;
+  canAddMember: boolean;
+}
+
+export interface LoyaltyOutcome {
+  phone: string;
+  name: string | null;
+  visitCounted: boolean;
+  rewardUsed: boolean;
+  rewardAmount: number;
+  visits: number;
+  visitsForReward: number;
+  rewardAvailable: boolean;
+  message: string | null;
+}
+
+export interface LoyaltyMemberRow {
+  id: string;
+  phone: string;
+  name: string;
+  status: string;
+  visits: number;
+  visitsForReward: number;
+  rewardAvailable: boolean;
+  rewardsUsed: number;
+  lastVisit: string | null;
+  joinedAtUtc: string;
+  joinedBy: string | null;
+  joinedBranch: string | null;
+}
+
+export interface LoyaltyBranchSwitches {
+  branchId: string;
+  branchName: string;
+  isEnabled: boolean;
+  cashierCanAddMembers: boolean;
+}
+
+export interface LoyaltySettings {
+  rules: LoyaltyRules;
+  canEditRules: boolean;
+  branches: LoyaltyBranchSwitches[];
 }

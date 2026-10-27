@@ -1,5 +1,6 @@
 using StockOrder.SharedKernel.Entities;
 using StockOrder.SharedKernel.Errors;
+using StockOrder.SharedKernel.Numbers;
 
 namespace StockOrder.Modules.Sales.Domain;
 
@@ -78,6 +79,9 @@ public sealed class SalesOrder : AuditedTenantEntity
     public decimal PaidAmount { get; private set; }
     public string BackOrderPolicy { get; private set; } = "Reject";
     public string? Notes { get; private set; }
+
+    /// <summary>A member's phone the waiter noted on the order (015_Loyalty), for the cashier.</summary>
+    public string? LoyaltyPhone { get; private set; }
     public Guid? SalesRepUserId { get; private set; }
     public Guid? ClientDocumentId { get; private set; }
     public Guid? SourceDeviceId { get; private set; }
@@ -185,6 +189,38 @@ public sealed class SalesOrder : AuditedTenantEntity
 
     public void RecordPayment(decimal amount) => PaidAmount += amount;
 
+    public void NoteLoyaltyPhone(string? phone) => LoyaltyPhone = phone;
+
+    /// <summary>The order belongs to a member from here on (their customer record, ledger and history).</summary>
+    public void AssignCustomer(Guid customerId) => CustomerId = customerId;
+
+    /// <summary>
+    /// A fixed amount off the whole order (a visit reward), spread over the lines in proportion
+    /// to their amounts so every line still follows the section 8.7 maths; the last line takes
+    /// the rounding remainder. The caller checks the order is big enough.
+    /// </summary>
+    public void ApplyOrderDiscount(decimal amount)
+    {
+        var open = _lines.Where(l => l.Status != SalesOrderLineStatus.Cancelled).ToList();
+        var bases = open.Select(l => l.Gross - l.DiscountAmount).ToList();
+        var total = bases.Sum();
+        if (amount <= 0 || total <= 0)
+        {
+            return;
+        }
+
+        amount = Math.Min(amount, total);
+        var left = amount;
+        for (var i = 0; i < open.Count; i++)
+        {
+            var share = i == open.Count - 1 ? left : Math.Min(left, Rounding.Money(amount * bases[i] / total));
+            open[i].AddDiscount(share);
+            left -= share;
+        }
+
+        RecalculateTotals();
+    }
+
     private void RecalculateTotals()
     {
         // Sums of the rounded line values (section 8.7); gross = total − tax + discount.
@@ -247,6 +283,15 @@ public sealed class SalesOrderLine : TenantEntity
             LineTotal = amounts.LineTotal,
             Notes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim(),
         };
+
+    internal decimal Gross => Rounding.Money(Quantity * UnitPrice);
+
+    internal void AddDiscount(decimal amount)
+    {
+        DiscountAmount += amount;
+        TaxAmount = Rounding.Money((Gross - DiscountAmount) * TaxRatePercent / 100m);
+        LineTotal = Gross - DiscountAmount + TaxAmount;
+    }
 
     internal void Fulfil()
     {
