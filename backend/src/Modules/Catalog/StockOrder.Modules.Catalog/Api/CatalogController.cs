@@ -59,7 +59,8 @@ public sealed class CatalogController(IMediator mediator) : ControllerBase
     public async Task<IActionResult> CreateCategory(CreateCategoryCommand command, CancellationToken ct) =>
         (await mediator.Send(command, ct)).ToActionResult();
 
-    public sealed record UpdateCategoryRequest(string Name, int SortOrder, bool IsActive);
+    /// <param name="SendToKitchen">Missing = true, so older clients keep their categories on the kitchen screen.</param>
+    public sealed record UpdateCategoryRequest(string Name, int SortOrder, bool IsActive, bool? SendToKitchen);
 
     /// <summary>Upload or replace an item's picture (multipart form, field "file").</summary>
     [HttpPut("products/{productId:guid}/image")]
@@ -108,5 +109,5 @@ public sealed class CatalogController(IMediator mediator) : ControllerBase
     [HttpPut("categories/{categoryId:guid}")]
     [Authorize(Policy = "Catalog.Manage")]
     public async Task<IActionResult> UpdateCategory(Guid categoryId, UpdateCategoryRequest request, CancellationToken ct) =>
-        (await mediator.Send(new UpdateCategoryCommand(categoryId, request.Name, request.SortOrder, request.IsActive), ct)).ToActionResult();
+        (await mediator.Send(new UpdateCategoryCommand(categoryId, request.Name, request.SortOrder, request.IsActive, request.SendToKitchen ?? true), ct)).ToActionResult();
 }

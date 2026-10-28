@@ -29,7 +29,7 @@ internal sealed class SalesCatalog(IUnitOfWork unitOfWork, ICurrentUserContext c
             SELECT p.Id, p.Name, t.Behaviour, p.BaseUomId, COALESCE(p.SalesUomId, p.BaseUomId) AS UomId,
                    u.DecimalPlaces, COALESCE(c.FactorToBase, 1) AS FactorToBase,
                    p.IsActive, p.IsSellable, p.OwnerBranchId, pb.IsAvailable AS BranchAvailable,
-                   p.TaxCodeId, COALESCE(tc.RatePercent, 0) AS TaxRatePercent
+                   p.TaxCodeId, COALESCE(tc.RatePercent, 0) AS TaxRatePercent, CAST(COALESCE(cat.SendToKitchen, 1) AS bit) AS SendToKitchen
             FROM catalog.Product p
             JOIN catalog.ProductType t ON t.TenantId = p.TenantId AND t.Id = p.ProductTypeId
             JOIN catalog.UnitOfMeasure u ON u.TenantId = p.TenantId AND u.Id = COALESCE(p.SalesUomId, p.BaseUomId)
@@ -37,6 +37,7 @@ internal sealed class SalesCatalog(IUnitOfWork unitOfWork, ICurrentUserContext c
                    ON c.TenantId = p.TenantId AND c.ProductId = p.Id AND c.UomId = COALESCE(p.SalesUomId, p.BaseUomId)
             LEFT JOIN catalog.ProductBranch pb ON pb.TenantId = p.TenantId AND pb.ProductId = p.Id AND pb.BranchId = @branchId
             LEFT JOIN catalog.TaxCode tc ON tc.TenantId = p.TenantId AND tc.Id = p.TaxCodeId
+            LEFT JOIN catalog.Category cat ON cat.TenantId = p.TenantId AND cat.Id = p.CategoryId
             WHERE p.TenantId = @tenantId AND p.Id IN @productIds;
 
             SELECT l.Id,
@@ -83,7 +84,7 @@ internal sealed class SalesCatalog(IUnitOfWork unitOfWork, ICurrentUserContext c
 
             return new SaleLineQuote(
                 p.Id, availability, p.Name, p.Behaviour, p.UomId, p.DecimalPlaces, p.FactorToBase,
-                ResolvePrice(p, line.Quantity, items, listRank), p.TaxCodeId, p.TaxRatePercent);
+                ResolvePrice(p, line.Quantity, items, listRank), p.TaxCodeId, p.TaxRatePercent, p.SendToKitchen);
         }).ToList();
     }
 
@@ -127,7 +128,8 @@ internal sealed class SalesCatalog(IUnitOfWork unitOfWork, ICurrentUserContext c
 
     private sealed record ProductRow(
         Guid Id, string Name, string Behaviour, Guid BaseUomId, Guid UomId, byte DecimalPlaces, decimal FactorToBase,
-        bool IsActive, bool IsSellable, Guid? OwnerBranchId, bool? BranchAvailable, Guid? TaxCodeId, decimal TaxRatePercent);
+        bool IsActive, bool IsSellable, Guid? OwnerBranchId, bool? BranchAvailable, Guid? TaxCodeId, decimal TaxRatePercent,
+        bool SendToKitchen);
 
     private sealed record ListRow(Guid Id, int Rank);
 

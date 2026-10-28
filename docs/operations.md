@@ -66,6 +66,23 @@ copy from the order's **Receipt** button on the Paid tab.
   and receipts go straight to the default printer.
 - Reprints are marked **COPY** and leave out "cash received / change", which isn't stored.
 
+## Restaurant: kitchen screen, tables, hall TV
+
+Run `016_RestaurantPack.sql` **before** deploying this version (the API refuses to start
+without it).
+
+- **IIS WebSockets**: turn on the "WebSocket Protocol" feature (Server Manager → Web Server →
+  Application Development) so the kitchen screen updates instantly. Without it the screen
+  still works, refreshing every 20 seconds.
+- **Kitchen screen**: a PC or tablet in the kitchen with Chrome, signed in as a user with the
+  Kitchen role; it opens on Restaurant → Kitchen. Tap "Full screen" and "Sound on" once.
+  Sign-in lasts about 12 hours, so expect to sign in again once per shift.
+- **Tables**: Restaurant → Tables in the back office (areas first, then tables). Waiters see
+  them in the app under Tables; tables need the phone to be online.
+- **Hall TV**: Branches → Order screen → Switch on, then open the link on the TV's browser,
+  full screen, and tap "Tap for sound". Numbers only; takeaway and counter orders.
+- **Drinks off the kitchen screen**: Catalog → Categories → edit → "Goes to the kitchen screen".
+
 ## Backup plan
 
 - **Full backup**: daily, e.g. 2 AM, `BACKUP DATABASE StockOrderPlatform TO DISK = '...'

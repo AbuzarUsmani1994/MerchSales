@@ -50,4 +50,26 @@ public sealed class BranchesController(IMediator mediator) : ControllerBase
     [Idempotent]
     public async Task<IActionResult> SwitchOffPublicMenu(Guid branchId, CancellationToken ct) =>
         (await mediator.Send(new SetPublicMenuLinkCommand(branchId, On: false), ct)).ToActionResult();
+
+    /// <summary>The branch's customer order screen link (restaurants): "Now preparing / Ready" for the hall TV.</summary>
+    [HttpGet("{branchId:guid}/order-screen")]
+    [Authorize(Policy = "Branches.Manage")]
+    [BranchScoped]
+    public async Task<IActionResult> GetOrderScreen(Guid branchId, CancellationToken ct) =>
+        (await mediator.Send(new GetPublicMenuLinkQuery(branchId, PublicLinkKind.OrderScreen), ct)).ToActionResult();
+
+    /// <summary>Switches the order screen on with a new link; a TV still showing the old link stops updating.</summary>
+    [HttpPost("{branchId:guid}/order-screen/new-link")]
+    [Authorize(Policy = "Branches.Manage")]
+    [BranchScoped]
+    [Idempotent]
+    public async Task<IActionResult> NewOrderScreenLink(Guid branchId, CancellationToken ct) =>
+        (await mediator.Send(new SetPublicMenuLinkCommand(branchId, On: true, PublicLinkKind.OrderScreen), ct)).ToActionResult();
+
+    [HttpPost("{branchId:guid}/order-screen/switch-off")]
+    [Authorize(Policy = "Branches.Manage")]
+    [BranchScoped]
+    [Idempotent]
+    public async Task<IActionResult> SwitchOffOrderScreen(Guid branchId, CancellationToken ct) =>
+        (await mediator.Send(new SetPublicMenuLinkCommand(branchId, On: false, PublicLinkKind.OrderScreen), ct)).ToActionResult();
 }

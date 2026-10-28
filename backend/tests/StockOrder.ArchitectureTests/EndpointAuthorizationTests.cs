@@ -22,6 +22,7 @@ public sealed class EndpointAuthorizationTests
         typeof(StockOrder.Modules.Catalog.CatalogModule).Assembly,
         typeof(StockOrder.Modules.Finance.FinanceModule).Assembly,
         typeof(StockOrder.Modules.Sales.SalesModule).Assembly,
+        typeof(StockOrder.Modules.Restaurant.RestaurantModule).Assembly,
     ];
 
     [Fact]

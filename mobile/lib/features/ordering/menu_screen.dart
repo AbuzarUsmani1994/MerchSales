@@ -34,6 +34,7 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
     final branch = ref.watch(orderBranchProvider);
     final menu = ref.watch(menuProvider).value ?? const <MenuEntry>[];
     final cart = ref.watch(cartProvider);
+    final table = cart.table;
 
     final categories = <String?, String>{};
     for (final item in menu) {
@@ -50,9 +51,16 @@ class _MenuScreenState extends ConsumerState<MenuScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(branch == null ? l10n.menuTitle : '${l10n.menuTitle} · ${branch.name}'),
+        title: Text(
+          table != null
+              ? l10n.tableName(table.tableName)
+              : branch == null
+                  ? l10n.menuTitle
+                  : '${l10n.menuTitle} · ${branch.name}',
+        ),
         actions: [
-          if (branches.length > 1)
+          // A table's order stays at the table's branch.
+          if (branches.length > 1 && table == null)
             PopupMenuButton<String>(
               tooltip: l10n.chooseBranch,
               icon: const Icon(Icons.storefront_outlined),

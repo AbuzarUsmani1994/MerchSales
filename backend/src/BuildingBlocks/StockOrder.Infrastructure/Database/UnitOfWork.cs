@@ -1,10 +1,12 @@
 using Microsoft.Data.SqlClient;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
 namespace StockOrder.Infrastructure.Database;
 
-internal sealed class UnitOfWork(IOptions<DatabaseOptions> options) : IUnitOfWork
+internal sealed class UnitOfWork(IOptions<DatabaseOptions> options, ILogger<UnitOfWork> logger) : IUnitOfWork
 {
+    private readonly List<Func<Task>> _onCommitted = [];
     private SqlConnection? _connection;
     private SqlTransaction? _transaction;
 
@@ -46,7 +48,23 @@ internal sealed class UnitOfWork(IOptions<DatabaseOptions> options) : IUnitOfWor
         await _transaction.CommitAsync(ct);
         await _transaction.DisposeAsync();
         _transaction = null;
+
+        var callbacks = _onCommitted.ToList();
+        _onCommitted.Clear();
+        foreach (var callback in callbacks)
+        {
+            try
+            {
+                await callback();
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "An after-commit notification failed; the change itself is saved.");
+            }
+        }
     }
+
+    public void OnCommitted(Func<Task> callback) => _onCommitted.Add(callback);
 
     public async Task RollbackAsync(CancellationToken ct)
     {
@@ -55,6 +73,7 @@ internal sealed class UnitOfWork(IOptions<DatabaseOptions> options) : IUnitOfWor
             return;
         }
 
+        _onCommitted.Clear();
         await _transaction.RollbackAsync(ct);
         await _transaction.DisposeAsync();
         _transaction = null;

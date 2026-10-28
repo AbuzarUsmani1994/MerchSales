@@ -44,7 +44,10 @@ public sealed class SalesOrdersController(IMediator mediator) : ControllerBase
         return result.ToActionResult();
     }
 
-    public sealed record CreateSalesOrderRequest(Guid BranchId, string? Channel, string? Notes, IReadOnlyList<CreateSalesOrderLine> Lines, string? CustomerPhone);
+    /// <param name="TableId">A dine-in order at a table; the table stays taken until the order is paid or cancelled.</param>
+    public sealed record CreateSalesOrderRequest(
+        Guid BranchId, string? Channel, string? Notes, IReadOnlyList<CreateSalesOrderLine> Lines, string? CustomerPhone,
+        Guid? TableId, int? Covers);
 
     [HttpPost]
     [Authorize(Policy = SalesPermissions.OrderCreate)]
@@ -52,10 +55,45 @@ public sealed class SalesOrdersController(IMediator mediator) : ControllerBase
     [Idempotent]
     public async Task<IActionResult> Create(CreateSalesOrderRequest request, CancellationToken ct) =>
         (await mediator.Send(new CreateSalesOrderCommand(
-            request.BranchId, request.Channel ?? SalesChannels.BackOffice, request.Notes, request.Lines ?? [],
-            CustomerPhone: request.CustomerPhone), ct)).ToActionResult();
+            request.BranchId, request.Channel ?? (request.TableId is null ? SalesChannels.BackOffice : SalesChannels.DineIn),
+            request.Notes, request.Lines ?? [], CustomerPhone: request.CustomerPhone, TableId: request.TableId, Covers: request.Covers), ct)).ToActionResult();
 
-    public sealed record CompleteSalesOrderRequest(Guid PaymentMethodId, decimal? AmountTendered, string? Reference, string? LoyaltyPhone, bool UseReward);
+    public sealed record AddRoundRequest(IReadOnlyList<CreateSalesOrderLine> Lines, string? Notes);
+
+    /// <summary>The table orders more: the items join the open order and go to the kitchen as the next round.</summary>
+    [HttpPost("{orderId:guid}/rounds")]
+    [Authorize(Policy = SalesPermissions.OrderCreate)]
+    [BranchScoped]
+    [Idempotent]
+    public async Task<IActionResult> AddRound(Guid orderId, AddRoundRequest request, CancellationToken ct)
+    {
+        if (RequireIfMatch() is { } missing)
+        {
+            return missing;
+        }
+
+        return (await mediator.Send(new AddOrderRoundCommand(orderId, Request.Headers.IfMatch.ToString(), request.Lines ?? [], request.Notes), ct))
+            .ToActionResult();
+    }
+
+    /// <summary>The waiter tells the cashier the table wants its bill.</summary>
+    [HttpPost("{orderId:guid}/request-bill")]
+    [Authorize(Policy = SalesPermissions.OrderCreate)]
+    [BranchScoped]
+    [Idempotent]
+    public async Task<IActionResult> RequestBill(Guid orderId, CancellationToken ct)
+    {
+        if (RequireIfMatch() is { } missing)
+        {
+            return missing;
+        }
+
+        return (await mediator.Send(new RequestBillCommand(orderId, Request.Headers.IfMatch.ToString()), ct)).ToActionResult();
+    }
+
+    /// <param name="Payments">A split bill: the parts must add up to the total (after any reward).</param>
+    public sealed record CompleteSalesOrderRequest(
+        Guid PaymentMethodId, decimal? AmountTendered, string? Reference, string? LoyaltyPhone, bool UseReward, IReadOnlyList<PaymentPart>? Payments);
 
     [HttpPost("{orderId:guid}/complete")]
     [Authorize(Policy = SalesPermissions.OrderFulfil)]
@@ -70,7 +108,7 @@ public sealed class SalesOrdersController(IMediator mediator) : ControllerBase
 
         return (await mediator.Send(new CompleteSalesOrderCommand(
             orderId, Request.Headers.IfMatch.ToString(), request.PaymentMethodId, request.AmountTendered, request.Reference,
-            request.LoyaltyPhone, request.UseReward), ct)).ToActionResult();
+            request.LoyaltyPhone, request.UseReward, request.Payments is { Count: > 0 } parts ? parts : null), ct)).ToActionResult();
     }
 
     /// <summary>

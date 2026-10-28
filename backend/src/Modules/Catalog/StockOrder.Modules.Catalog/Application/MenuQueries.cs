@@ -10,7 +10,7 @@ namespace StockOrder.Modules.Catalog.Application;
 
 public sealed record LookupItem(Guid Id, string Code, string Name);
 
-public sealed record CategoryItem(Guid Id, string Name, int SortOrder, bool IsActive);
+public sealed record CategoryItem(Guid Id, string Name, int SortOrder, bool IsActive, bool SendToKitchen);
 
 public sealed record CatalogLookups(
     IReadOnlyList<LookupItem> Units,
@@ -32,7 +32,7 @@ public sealed class GetCatalogLookupsQueryHandler(CatalogDbContext db, ICurrentU
         var types = await db.ProductTypes.Where(t => t.TenantId == tenantId && t.IsActive).OrderBy(t => t.Name)
             .Select(t => new LookupItem(t.Id, t.Behaviour, t.Name)).ToListAsync(ct);
         var categories = await db.Categories.Where(c => c.TenantId == tenantId).OrderBy(c => c.SortOrder).ThenBy(c => c.Name)
-            .Select(c => new CategoryItem(c.Id, c.Name, c.SortOrder, c.IsActive)).ToListAsync(ct);
+            .Select(c => new CategoryItem(c.Id, c.Name, c.SortOrder, c.IsActive, c.SendToKitchen)).ToListAsync(ct);
         var hasDefault = await db.PriceLists.AnyAsync(p => p.TenantId == tenantId && p.IsDefault, ct);
 
         return Result.Success(new CatalogLookups(units, types, categories, hasDefault));

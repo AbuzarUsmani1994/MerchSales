@@ -29,12 +29,12 @@ export const authGuard: CanActivateFn = async () => {
  * real enforcement point and re-checks every request regardless of what the UI shows.
  */
 export const permissionGuard =
-  (permissionCode: string, options: { tenantWide?: boolean } = {}): CanActivateFn =>
+  (permissionCode: string, options: { tenantWide?: boolean; feature?: string } = {}): CanActivateFn =>
   () => {
     const auth = inject(AuthService);
     const router = inject(Router);
-    const allowed = options.tenantWide
-      ? auth.hasTenantWidePermission(permissionCode)
-      : auth.hasPermission(permissionCode);
+    const allowed =
+      (options.tenantWide ? auth.hasTenantWidePermission(permissionCode) : auth.hasPermission(permissionCode)) &&
+      (!options.feature || auth.hasFeature(options.feature));
     return allowed ? true : router.createUrlTree(['/']);
   };

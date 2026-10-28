@@ -105,3 +105,48 @@ stays out of scope, section 3).
   a domain name, or they'll break when the address changes.
 
 **Approved by** the owner (TRS), 2026-10-27.
+
+## Tables and kitchen screen (Restaurant pack, part 1)
+
+**Context.** Phase 2 restaurant pack, built first at the owner's request: tables with rounds,
+a kitchen screen, and a "Now preparing / Ready" screen for customers. Recipes (stock use)
+wait until stock receiving exists; Bluetooth printing waits for the printer model.
+
+**Decision.**
+- Schema `016_RestaurantPack.sql` (the spec's "013" number was already used). New module
+  `Restaurant` (areas, tables, kitchen tickets, hub). Sales keeps the orders and calls the
+  kitchen through `Restaurant.Contracts` in the same transaction; Restaurant reads open table
+  orders through `Sales.Contracts`.
+- **Short daily order number** (#1, #2, ...) per branch, counted per business day: the open
+  cash session's date if any, else today. It doesn't restart at midnight while the till is
+  open; it restarts after the cashier closes the day. Every order gets one when the
+  `Restaurant.Kitchen` feature is on; the receipt prints it large.
+- **Tables**: one open order per table (a filtered unique index). Waiters open a table, add
+  rounds and ask for the bill **online only**, straight to the API, never through the
+  offline queue: a round that reaches the kitchen hours late is worse than "not sent". The
+  app says "Not sent to the kitchen" in red and keeps the items; retries reuse the
+  Idempotency-Key. With tables on, the app's "New order" is takeaway (it still works
+  offline, through sync).
+- **Kitchen screen** (web, one per branch, no stations yet): New / Preparing / Ready, Start /
+  Ready / Served / Back. Kitchen role and managers operate it; Served is also open to waiters
+  and cashiers (`Restaurant.Kitchen.Serve`). Paying a dine-in table marks its unfinished
+  tickets served; takeaway tickets are not touched (people pay first and wait). Ready cards
+  leave after 30 minutes, cancelled ones after 5, everything after 12 hours.
+- **Live updates**: SignalR hub `/hubs/kitchen` (section 2). A message only says "this
+  branch changed"; the screen reloads through the permission-checked API, so the hub needs
+  only a signed-in user and no database. It runs outside the request unit of work, and
+  messages go out only after the transaction commits. The token travels in the query string
+  for WebSockets (paths only are logged). The board also reloads every 20 seconds, so it
+  works without WebSockets.
+- **Customer order screen** `/s/{code}`: no login, numbers only, takeaway and counter orders
+  (not tables); same link mechanism and rate limit as the customer menu (setting
+  `OrderScreen.Code.{branchId}`). Ready numbers leave after 10 minutes if nobody taps Served.
+- **Categories** can be kept off the kitchen screen ("Goes to the kitchen screen" switch),
+  e.g. drinks the counter pours. On by default.
+- **Split bill**: one invoice, several payments (equally, by items, or by amount; one method
+  per guest). The parts must add up to the total exactly.
+- **No service charge** (owner's decision).
+- Not in this part: removing one item after it was sent (needs void with reason + manager
+  PIN), moving or merging tables, kitchen stations, modifiers, recipes.
+
+**Approved by** the owner (TRS), 2026-10-28.

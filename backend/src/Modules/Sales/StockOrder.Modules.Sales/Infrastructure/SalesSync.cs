@@ -60,6 +60,7 @@ internal sealed class CreateSalesOrderSyncHandler(IMediator mediator) : ISyncCom
         {
             serverIds = new { salesOrder = order.Id },
             documentNo = order.DocumentNo,
+            orderNo = order.OrderNo,
             status = order.Status,
             grandTotal = order.GrandTotal,
         });
@@ -95,7 +96,7 @@ internal sealed class OpenOrdersSyncSource(
         var orders = (await unitOfWork.Connection.QueryAsync<OrderRow>(new CommandDefinition(
             """
             SELECT TOP (@limit) Id, DocumentNo, ClientDocumentId, Status, Channel, BranchId, Notes, GrandTotal, PaidAmount,
-                   OrderDate, SalesRepUserId, RowVer
+                   OrderDate, SalesRepUserId, OrderNo, TableId, RowVer
             FROM sales.SalesOrder
             WHERE TenantId = @tenantId AND RowVer > @after AND RowVer < @upper AND OrderDate >= @since
               AND (@allBranches = 1 OR BranchId IN @branchIds)
@@ -120,7 +121,7 @@ internal sealed class OpenOrdersSyncSource(
             orders.Select(o => (object)new
             {
                 o.Id, o.DocumentNo, o.ClientDocumentId, o.Status, o.Channel, o.BranchId, o.Notes, o.GrandTotal, o.PaidAmount,
-                o.OrderDate, TakenByUserId = o.SalesRepUserId,
+                o.OrderDate, TakenByUserId = o.SalesRepUserId, o.OrderNo, o.TableId,
                 Lines = lines[o.Id].OrderBy(l => l.LineNumber).Select(l => new { l.ProductId, ProductName = names.GetValueOrDefault(l.ProductId, "Item"), l.Quantity, l.UnitPrice, l.LineTotal, l.Notes }),
             }).ToList(),
             RowVersionToken.Next(versions, request.Limit, request.UpperRowVersion),
@@ -129,7 +130,7 @@ internal sealed class OpenOrdersSyncSource(
 
     private sealed record OrderRow(
         Guid Id, string? DocumentNo, Guid? ClientDocumentId, string Status, string Channel, Guid BranchId, string? Notes,
-        decimal GrandTotal, decimal PaidAmount, DateTime OrderDate, Guid? SalesRepUserId, byte[] RowVer);
+        decimal GrandTotal, decimal PaidAmount, DateTime OrderDate, Guid? SalesRepUserId, int? OrderNo, Guid? TableId, byte[] RowVer);
 
     private sealed record LineRow(
         Guid SalesOrderId, int LineNumber, Guid ProductId, decimal Quantity, decimal UnitPrice, decimal LineTotal, string? Notes);

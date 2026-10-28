@@ -9,6 +9,8 @@ export interface CategoryItem {
   name: string;
   sortOrder: number;
   isActive: boolean;
+  /** False keeps the category's items off the kitchen screen (e.g. soft drinks). */
+  sendToKitchen: boolean;
 }
 
 export interface CatalogLookups {

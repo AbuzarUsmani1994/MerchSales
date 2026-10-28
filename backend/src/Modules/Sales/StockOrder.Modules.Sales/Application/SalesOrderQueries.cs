@@ -2,6 +2,7 @@ using FluentValidation;
 using Mediator;
 using Microsoft.EntityFrameworkCore;
 using StockOrder.Infrastructure.Outbox;
+using StockOrder.Modules.Restaurant.Contracts;
 using StockOrder.Modules.Sales.Domain;
 using StockOrder.Modules.Sales.Infrastructure;
 using StockOrder.SharedKernel.Context;
@@ -50,7 +51,10 @@ public sealed class ListSalesOrdersQueryHandler(SalesDbContext db, ICurrentUserC
         if (!string.IsNullOrWhiteSpace(query.Search))
         {
             var term = query.Search.Trim();
-            orders = orders.Where(o => (o.DocumentNo != null && o.DocumentNo.Contains(term)) || (o.Notes != null && o.Notes.Contains(term)));
+            // "#23" or "23" finds the restaurant's short order number too.
+            var shortNo = int.TryParse(term.TrimStart('#'), out var n) ? n : (int?)null;
+            orders = orders.Where(o => (o.DocumentNo != null && o.DocumentNo.Contains(term)) || (o.Notes != null && o.Notes.Contains(term))
+                || (shortNo != null && o.OrderNo == shortNo));
         }
 
         var page = Math.Max(1, query.Page);
@@ -102,6 +106,7 @@ public sealed class CancelSalesOrderCommandHandler(
     IAccessScope accessScope,
     IOutboxWriter outbox,
     SalesOrderViewBuilder views,
+    IKitchen kitchen,
     IClock clock)
     : ICommandHandler<CancelSalesOrderCommand, Result<SalesOrderView>>
 {
@@ -130,6 +135,11 @@ public sealed class CancelSalesOrderCommandHandler(
         }
 
         await db.SaveChangesAsync(ct);
+        if (order.OrderNo is not null)
+        {
+            await kitchen.CancelOrderAsync(order.Id, order.BranchId, ct);
+        }
+
         await SalesEvents.WriteAsync(outbox, order, SalesOrderStatus.Cancelled, ct);
         return Result.Success(await views.BuildAsync(currentUser.TenantId, order.Id, ct));
     }

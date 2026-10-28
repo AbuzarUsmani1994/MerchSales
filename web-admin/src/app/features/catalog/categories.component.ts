@@ -10,6 +10,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTableModule } from '@angular/material/table';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { AuthService } from '../../core/auth/auth.service';
 import { ConfigService } from '../../core/config.service';
 import { CatalogLookups, CategoryItem } from './catalog.models';
 
@@ -31,9 +32,15 @@ import { CatalogLookups, CategoryItem } from './catalog.models';
             <input matInput type="number" formControlName="sortOrder" />
           </mat-form-field>
         </div>
-        @if (data) {
-          <mat-slide-toggle formControlName="isActive">Shown on the menu</mat-slide-toggle>
-        }
+        <div class="toggles">
+          @if (data) {
+            <mat-slide-toggle formControlName="isActive">Shown on the menu</mat-slide-toggle>
+          }
+          @if (usesKitchen) {
+            <mat-slide-toggle formControlName="sendToKitchen">Goes to the kitchen screen</mat-slide-toggle>
+            <div class="hint">Switch off for items the counter serves itself, e.g. soft drinks.</div>
+          }
+        </div>
       </form>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
@@ -41,23 +48,29 @@ import { CatalogLookups, CategoryItem } from './catalog.models';
       <button mat-flat-button color="primary" [disabled]="form.invalid" (click)="submit()">{{ data ? 'Save' : 'Add' }}</button>
     </mat-dialog-actions>
   `,
-  styles: `.name-order { grid-template-columns: 3fr 1fr; }`,
+  styles: `
+    .name-order { grid-template-columns: 3fr 1fr; }
+    .toggles { display: flex; flex-direction: column; gap: 0.75rem; }
+    .hint { font-size: 0.8rem; color: var(--so-text-muted); margin-top: -0.5rem; }
+  `,
 })
 export class CategoryDialogComponent {
   readonly dialogRef = inject(MatDialogRef<CategoryDialogComponent>);
   readonly data = inject<CategoryItem | null>(MAT_DIALOG_DATA);
   private readonly fb = inject(FormBuilder);
+  readonly usesKitchen = inject(AuthService).hasFeature('Restaurant.Kitchen');
 
   readonly form = this.fb.nonNullable.group({
     name: [this.data?.name ?? '', [Validators.required, Validators.maxLength(150)]],
     sortOrder: [this.data?.sortOrder ?? 0, Validators.required],
     isActive: [this.data?.isActive ?? true],
+    sendToKitchen: [this.data?.sendToKitchen ?? true],
   });
 
   submit(): void {
     if (this.form.invalid) return;
     const v = this.form.getRawValue();
-    this.dialogRef.close({ name: v.name.trim(), sortOrder: Number(v.sortOrder), isActive: v.isActive });
+    this.dialogRef.close({ name: v.name.trim(), sortOrder: Number(v.sortOrder), isActive: v.isActive, sendToKitchen: v.sendToKitchen });
   }
 }
 
@@ -97,6 +110,7 @@ export class CategoryDialogComponent {
             <th mat-header-cell *matHeaderCellDef>Status</th>
             <td mat-cell *matCellDef="let c">
               <span class="pill" [class.pill-success]="c.isActive">{{ c.isActive ? 'Shown' : 'Hidden' }}</span>
+              @if (usesKitchen && !c.sendToKitchen) { <span class="pill">Not on kitchen screen</span> }
             </td>
           </ng-container>
           <ng-container matColumnDef="actions">
@@ -122,6 +136,7 @@ export class CategoriesComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly config = inject(ConfigService);
   private readonly dialog = inject(MatDialog);
+  readonly usesKitchen = inject(AuthService).hasFeature('Restaurant.Kitchen');
 
   readonly categories = signal<CategoryItem[]>([]);
   readonly loading = signal(true);
@@ -144,7 +159,9 @@ export class CategoriesComponent implements OnInit {
         if (category) {
           await firstValueFrom(this.http.put(`${this.baseUrl}/categories/${category.id}`, request));
         } else {
-          await firstValueFrom(this.http.post(`${this.baseUrl}/categories`, { name: request.name, sortOrder: request.sortOrder }));
+          await firstValueFrom(this.http.post(`${this.baseUrl}/categories`, {
+            name: request.name, sortOrder: request.sortOrder, sendToKitchen: request.sendToKitchen,
+          }));
         }
         await this.load();
       });

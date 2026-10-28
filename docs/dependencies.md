@@ -51,6 +51,7 @@ or its major version changes.
 | @jsverse/transloco | MIT |
 | @angular/material, @angular/cdk | MIT |
 | ag-grid-angular, ag-grid-community | MIT (Community edition) |
+| @microsoft/signalr | MIT (kitchen screen live updates; approved 2026-10-28; loaded only with the kitchen page) |
 | rxjs | Apache-2.0 |
 | eslint, @eslint/js, angular-eslint, typescript-eslint | MIT |
 | Inter, JetBrains Mono fonts (Google Fonts, linked from `index.html`, not an npm package) | SIL Open Font License 1.1 |

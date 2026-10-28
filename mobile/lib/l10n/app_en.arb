@@ -221,5 +221,66 @@
   },
   "customerPhone": "Customer phone (visit rewards)",
   "customerPhoneHint": "Optional · e.g. 0300 1234567",
-  "customerPhoneInvalid": "Enter a mobile number like 0300 1234567, or leave it empty."
+  "customerPhoneInvalid": "Enter a mobile number like 0300 1234567, or leave it empty.",
+  "tablesTitle": "Tables",
+  "tablesHint": "Open a table, add rounds, ask for the bill",
+  "tableFree": "Free",
+  "tableTaken": "Taken",
+  "tableBillAsked": "Bill asked",
+  "tableFoodReady": "Food ready",
+  "tableName": "Table {name}",
+  "@tableName": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "tablesNeedInternet": "No connection. Tables need internet, so the kitchen gets orders straight away.",
+  "tablesEmpty": "No tables at this branch yet. A manager adds them in the back office: Restaurant, then Tables.",
+  "guestsQuestion": "How many guests?",
+  "guestsCount": "{count} guests",
+  "@guestsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "openTable": "Open table",
+  "addItems": "Add items",
+  "askForBill": "Ask for bill",
+  "markServed": "Served",
+  "sendToKitchen": "Send to kitchen",
+  "notSentToKitchen": "Not sent to the kitchen. Check the internet and try again.",
+  "sentToKitchen": "Sent to the kitchen · order #{orderNo}",
+  "@sentToKitchen": {
+    "placeholders": {
+      "orderNo": {
+        "type": "int"
+      }
+    }
+  },
+  "billAskedDone": "The cashier can see this table wants its bill.",
+  "roundNote": "Note for the kitchen (this round)",
+  "orderNumber": "Order #{orderNo}",
+  "@orderNumber": {
+    "placeholders": {
+      "orderNo": {
+        "type": "int"
+      }
+    }
+  },
+  "inKitchen": "{count} in the kitchen",
+  "@inKitchen": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "takeawayLabel": "Customer name (takeaway)",
+  "takeawayLabelHint": "e.g. Ali",
+  "tableChanged": "Someone else just opened this table, or it was paid. Go back to Tables and check it; your items are still here.",
+  "newTakeawayHint": "Takeaway or counter order"
 }

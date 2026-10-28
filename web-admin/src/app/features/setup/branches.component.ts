@@ -177,32 +177,46 @@ export class NewWarehouseDialogComponent {
   }
 }
 
+/** Which no-login page of a restaurant branch the dialog switches on or off. */
+export type PublicLinkKind = 'menu' | 'screen';
+
 /**
- * A restaurant branch's customer menu: guests scan the QR on a waiter's phone and see the
- * branch's menu, prices and pictures in their own browser. The QR itself lives in the app.
+ * A restaurant branch's no-login pages. The customer menu: guests scan the QR on a waiter's phone
+ * and see the branch's menu, prices and pictures in their own browser (the QR itself lives in the
+ * app). The order screen: "Now preparing / Ready to collect" numbers for a TV in the hall.
  */
 @Component({
   selector: 'app-customer-menu-dialog',
   standalone: true,
   imports: [MatDialogModule, MatButtonModule, MatIconModule, MatProgressBarModule],
   template: `
-    <h2 mat-dialog-title>Customer menu · {{ data.name }}</h2>
+    <h2 mat-dialog-title>{{ screen ? 'Order screen' : 'Customer menu' }} · {{ data.name }}</h2>
     <mat-dialog-content>
       @if (busy()) {
         <mat-progress-bar mode="indeterminate" />
       }
-      <p class="intro">
-        Waiters show a QR on their phone (Home, then Menu QR). Guests scan it with their own camera and see
-        this branch's menu, prices and pictures in their browser. No app or login, and nothing but the menu.
-      </p>
+      @if (screen) {
+        <p class="intro">
+          A page for a TV or screen in the hall: order numbers under "Now preparing" and "Ready to collect",
+          updated from the kitchen screen. Takeaway and counter orders only; nothing but numbers. Open the link
+          once on the TV's browser, full screen, and tap "Tap for sound" for a chime when an order is ready.
+        </p>
+      } @else {
+        <p class="intro">
+          Waiters show a QR on their phone (Home, then Menu QR). Guests scan it with their own camera and see
+          this branch's menu, prices and pictures in their browser. No app or login, and nothing but the menu.
+        </p>
+      }
       @if (link(); as current) {
         @if (current.isOn && current.code) {
           <div class="state on"><mat-icon>check_circle</mat-icon> On</div>
           <a class="link" [href]="url(current.code)" target="_blank" rel="noopener">{{ url(current.code) }}</a>
-          <p class="hint">Waiters' phones get changes at their next sync. A new link stops the old QR working.</p>
+          <p class="hint">
+            {{ screen ? 'A new link stops the old one: open the new link on the TV.' : "Waiters' phones get changes at their next sync. A new link stops the old QR working." }}
+          </p>
         } @else {
           <div class="state"><mat-icon>do_not_disturb_on</mat-icon> Off</div>
-          <p class="hint">Switch it on to give waiters a menu QR for this branch.</p>
+          <p class="hint">{{ screen ? 'Switch it on to get the link for the hall TV.' : 'Switch it on to give waiters a menu QR for this branch.' }}</p>
         }
       }
     </mat-dialog-content>
@@ -227,9 +241,10 @@ export class NewWarehouseDialogComponent {
 })
 export class CustomerMenuDialogComponent implements OnInit {
   readonly dialogRef = inject(MatDialogRef<CustomerMenuDialogComponent>);
-  readonly data = inject<BranchSummary>(MAT_DIALOG_DATA);
+  readonly data = inject<BranchSummary & { kind?: PublicLinkKind }>(MAT_DIALOG_DATA);
   private readonly http = inject(HttpClient);
   private readonly config = inject(ConfigService);
+  readonly screen = this.data.kind === 'screen';
 
   readonly link = signal<PublicMenuLink | null>(null);
   readonly busy = signal(true);
@@ -242,13 +257,16 @@ export class CustomerMenuDialogComponent implements OnInit {
     }
   }
 
-  /** The page a QR opens: served by the API's own site. */
+  /** The page a QR (or the TV) opens: served by the API's own site. */
   url(code: string): string {
-    return `${this.config.apiBaseUrl}/m/${code}`;
+    return `${this.config.apiBaseUrl}/${this.screen ? 's' : 'm'}/${code}`;
   }
 
   async change(action: 'new-link' | 'switch-off'): Promise<void> {
-    if (action === 'new-link' && this.link()?.isOn && !confirm('Make a new link? The current QR stops working, and waiters get the new one at their next sync.')) {
+    const question = this.screen
+      ? 'Make a new link? A TV still showing the current one stops updating.'
+      : 'Make a new link? The current QR stops working, and waiters get the new one at their next sync.';
+    if (action === 'new-link' && this.link()?.isOn && !confirm(question)) {
       return;
     }
     this.busy.set(true);
@@ -260,7 +278,7 @@ export class CustomerMenuDialogComponent implements OnInit {
   }
 
   private base(): string {
-    return `${this.config.apiBaseUrl}/api/v1/tenancy/branches/${this.data.id}/public-menu`;
+    return `${this.config.apiBaseUrl}/api/v1/tenancy/branches/${this.data.id}/${this.screen ? 'order-screen' : 'public-menu'}`;
   }
 }
 
@@ -340,6 +358,12 @@ export class CustomerMenuDialogComponent implements OnInit {
                   <mat-icon>qr_code_2</mat-icon>
                   Customer menu
                 </button>
+                @if (usesKitchen()) {
+                  <button mat-button (click)="openOrderScreen(branch)">
+                    <mat-icon>tv</mat-icon>
+                    Order screen
+                  </button>
+                }
               }
               @if (branch.isActive) {
                 <button mat-button (click)="openNewWarehouseDialog(branch)">
@@ -396,6 +420,7 @@ export class BranchesComponent implements OnInit {
 
   /** The customer menu (QR) is for restaurants only. */
   readonly isRestaurant = computed(() => this.auth.tenant()?.industry === 'Restaurant');
+  readonly usesKitchen = computed(() => this.auth.hasFeature('Restaurant.Kitchen'));
 
   readonly rows = computed<BranchRow[]>(() =>
     this.branches().map((branch) => ({
@@ -440,6 +465,10 @@ export class BranchesComponent implements OnInit {
 
   openCustomerMenu(branch: BranchSummary): void {
     this.dialog.open(CustomerMenuDialogComponent, { width: '480px', data: branch });
+  }
+
+  openOrderScreen(branch: BranchSummary): void {
+    this.dialog.open(CustomerMenuDialogComponent, { width: '480px', data: { ...branch, kind: 'screen' } });
   }
 
   openNewWarehouseDialog(branch: BranchSummary): void {

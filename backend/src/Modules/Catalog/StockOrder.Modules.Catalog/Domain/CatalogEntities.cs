@@ -36,23 +36,27 @@ public sealed class Category : AuditedTenantEntity
     public int SortOrder { get; private set; }
     public bool IsActive { get; private set; } = true;
 
+    /// <summary>False keeps the category's items off the kitchen screen, e.g. drinks the counter pours (016_RestaurantPack).</summary>
+    public bool SendToKitchen { get; private set; } = true;
+
     private Category()
     {
     }
 
-    public static Category Create(Guid tenantId, Guid id, string name, int sortOrder, DateTime nowUtc, Guid? createdBy) =>
-        new(tenantId, id, nowUtc, createdBy) { Name = name, SortOrder = sortOrder };
+    public static Category Create(Guid tenantId, Guid id, string name, int sortOrder, bool sendToKitchen, DateTime nowUtc, Guid? createdBy) =>
+        new(tenantId, id, nowUtc, createdBy) { Name = name, SortOrder = sortOrder, SendToKitchen = sendToKitchen };
 
     private Category(Guid tenantId, Guid id, DateTime nowUtc, Guid? createdBy)
         : base(tenantId, id, nowUtc, createdBy)
     {
     }
 
-    public void Update(string name, int sortOrder, bool isActive, DateTime nowUtc, Guid? updatedBy)
+    public void Update(string name, int sortOrder, bool isActive, bool sendToKitchen, DateTime nowUtc, Guid? updatedBy)
     {
         Name = name;
         SortOrder = sortOrder;
         IsActive = isActive;
+        SendToKitchen = sendToKitchen;
         MarkUpdated(nowUtc, updatedBy);
     }
 }

@@ -15,6 +15,12 @@ public interface IFinancePosting
     /// <summary>The caller's open cash session at the branch, if any (section 8.11: it decides the business date).</summary>
     Task<OpenCashSession?> GetOpenCashSessionAsync(Guid branchId, Guid userId, CancellationToken ct);
 
+    /// <summary>
+    /// The business date of the branch's oldest open cash session, if any: the trading day is
+    /// still running until the till closes, even after midnight (restaurant daily order numbers).
+    /// </summary>
+    Task<DateOnly?> GetOpenBusinessDateAsync(Guid branchId, CancellationToken ct);
+
     /// <summary>Customer ledger debit, e.g. for an invoice (append-only finance.PartyLedgerEntry).</summary>
     Task DebitCustomerAsync(CustomerLedgerPosting posting, CancellationToken ct);
 

@@ -39,6 +39,7 @@ public enum SaleAvailability
 /// <param name="UomId">The selling unit (SalesUomId, else the base unit) the quantity and price are in.</param>
 /// <param name="FactorToBase">Base units per selling unit, for QtyBase (section 8.1).</param>
 /// <param name="UnitPrice">Null when no price list has a price: PRICE_NOT_FOUND.</param>
+/// <param name="SendToKitchen">False when the item's category is kept off the kitchen screen (016_RestaurantPack).</param>
 public sealed record SaleLineQuote(
     Guid ProductId,
     SaleAvailability Availability,
@@ -49,4 +50,5 @@ public sealed record SaleLineQuote(
     decimal FactorToBase,
     decimal? UnitPrice,
     Guid? TaxCodeId,
-    decimal TaxRatePercent);
+    decimal TaxRatePercent,
+    bool SendToKitchen = true);

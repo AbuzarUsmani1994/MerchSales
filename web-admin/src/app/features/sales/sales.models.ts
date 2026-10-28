@@ -31,6 +31,13 @@ export interface SalesOrder {
   loyaltyPhone: string | null;
   etag: string;
   lines: SalesOrderLine[];
+  /** The restaurant's short daily number (#23); null where the kitchen screen is off. */
+  orderNo: number | null;
+  tableId: string | null;
+  tableName: string | null;
+  covers: number | null;
+  /** The waiter said the table wants its bill. */
+  billRequested: boolean;
 }
 
 export interface PagedList<T> {
@@ -71,6 +78,16 @@ export interface CompletedSale {
   amountPaid: number;
   change: number;
   loyalty: LoyaltyOutcome | null;
+  /** All the cash handed over (split bills too), for the receipt's first print. */
+  cashTendered: number | null;
+}
+
+/** One part of a split bill: the parts must add up to the total. */
+export interface PaymentPart {
+  paymentMethodId: string;
+  amount: number;
+  tendered: number | null;
+  reference: string | null;
 }
 
 export interface LoyaltyRules {
