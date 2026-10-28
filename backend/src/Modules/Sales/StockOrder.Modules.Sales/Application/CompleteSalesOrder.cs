@@ -27,23 +27,42 @@ namespace StockOrder.Modules.Sales.Application;
 /// <param name="AmountTendered">Cash handed over; at least the total. Ignored for card/wallet (exact amount).</param>
 /// <param name="LoyaltyPhone">A visit-reward member's phone: the visit counts and the order becomes theirs.</param>
 /// <param name="UseReward">Take the member's reward off this bill (it must be ready and the bill big enough).</param>
+/// <param name="Payments">A split bill: several payments that together make the total (after any
+/// reward). When given, <paramref name="PaymentMethodId"/>, <paramref name="AmountTendered"/> and
+/// <paramref name="Reference"/> are ignored.</param>
 public sealed record CompleteSalesOrderCommand(
     Guid OrderId, string? ExpectedETag, Guid PaymentMethodId, decimal? AmountTendered, string? Reference,
-    string? LoyaltyPhone = null, bool UseReward = false)
+    string? LoyaltyPhone = null, bool UseReward = false, IReadOnlyList<PaymentPart>? Payments = null)
     : ICommand<Result<CompletedSale>>;
 
+/// <param name="Tendered">Cash handed over for this part; at least <paramref name="Amount"/>. Ignored for card and wallet.</param>
+public sealed record PaymentPart(Guid PaymentMethodId, decimal Amount, decimal? Tendered, string? Reference);
+
+/// <param name="PaymentNo">The last payment's number (the receipt number).</param>
+/// <param name="PaymentMethod">The method, or "Split" for a split bill.</param>
+/// <param name="CashTendered">All the cash handed over, for the receipt's first print.</param>
 public sealed record CompletedSale(
-    SalesOrderView Order, string InvoiceNo, string? PaymentNo, string? PaymentMethod, decimal AmountPaid, decimal Change, LoyaltyOutcome? Loyalty);
+    SalesOrderView Order, string InvoiceNo, string? PaymentNo, string? PaymentMethod, decimal AmountPaid, decimal Change, LoyaltyOutcome? Loyalty,
+    decimal? CashTendered = null);
 
 public sealed class CompleteSalesOrderCommandValidator : AbstractValidator<CompleteSalesOrderCommand>
 {
     public CompleteSalesOrderCommandValidator()
     {
         RuleFor(c => c.OrderId).NotEmpty();
-        RuleFor(c => c.PaymentMethodId).NotEmpty();
         RuleFor(c => c.AmountTendered).GreaterThanOrEqualTo(0).PrecisionScale(19, 2, ignoreTrailingZeros: true);
         RuleFor(c => c.Reference).MaximumLength(100);
         RuleFor(c => c.LoyaltyPhone).MaximumLength(30);
+        RuleFor(c => c.PaymentMethodId).NotEmpty().When(c => c.Payments is null);
+        RuleFor(c => c.Payments).Must(p => p!.Count is >= 1 and <= 20).WithMessage("A bill can be split into 1 to 20 payments.")
+            .When(c => c.Payments is not null);
+        RuleForEach(c => c.Payments).ChildRules(part =>
+        {
+            part.RuleFor(p => p.PaymentMethodId).NotEmpty();
+            part.RuleFor(p => p.Amount).GreaterThan(0).PrecisionScale(19, 2, ignoreTrailingZeros: true);
+            part.RuleFor(p => p.Tendered).GreaterThanOrEqualTo(0).PrecisionScale(19, 2, ignoreTrailingZeros: true);
+            part.RuleFor(p => p.Reference).MaximumLength(100);
+        });
     }
 }
 
@@ -144,35 +163,49 @@ public sealed class CompleteSalesOrderCommandHandler(
         await finance.DebitCustomerAsync(
             new CustomerLedgerPosting(order.CustomerId, FinanceDocumentTypes.Invoice, invoice.Id, invoiceNo, invoice.GrandTotal, businessDate), ct);
 
-        // Payment: the whole total, allocated to the invoice. A free order (total 0) has nothing to pay.
+        // Payment: the whole total, allocated to the invoice, in one part or split. A free order
+        // (total 0) has nothing to pay.
         string? paymentNo = null;
         string? methodName = null;
         var change = 0m;
+        decimal? cashTendered = null;
         if (order.GrandTotal > 0)
         {
-            var received = await finance.ReceiveCustomerPaymentAsync(new ReceiveCustomerPayment(
-                order.CustomerId, order.BranchId, command.PaymentMethodId, order.GrandTotal, businessDate, sessionId, command.Reference,
-                [new PaymentAllocationRequest(FinanceDocumentTypes.Invoice, invoice.Id, order.GrandTotal)]), ct);
-            if (received.IsFailure)
+            var parts = command.Payments
+                ?? [new PaymentPart(command.PaymentMethodId, order.GrandTotal, command.AmountTendered, command.Reference)];
+            var partsTotal = parts.Sum(p => p.Amount);
+            if (partsTotal != order.GrandTotal)
             {
-                return Fail(received.Error);
+                return Fail(Error.Validation($"The payments add up to {partsTotal:N2}, but the bill is {order.GrandTotal:N2}."));
             }
 
-            if (received.Value.MethodKind == "Cash")
+            foreach (var part in parts)
             {
-                var tendered = command.AmountTendered ?? order.GrandTotal;
-                if (tendered < order.GrandTotal)
+                var received = await finance.ReceiveCustomerPaymentAsync(new ReceiveCustomerPayment(
+                    order.CustomerId, order.BranchId, part.PaymentMethodId, part.Amount, businessDate, sessionId, part.Reference,
+                    [new PaymentAllocationRequest(FinanceDocumentTypes.Invoice, invoice.Id, part.Amount)]), ct);
+                if (received.IsFailure)
                 {
-                    return Fail(Error.Validation($"The customer handed over {tendered:N2}, less than the total of {order.GrandTotal:N2}."));
+                    return Fail(received.Error);
                 }
 
-                change = Rounding.Money(tendered - order.GrandTotal);
-            }
+                if (received.Value.MethodKind == "Cash")
+                {
+                    var tendered = part.Tendered ?? part.Amount;
+                    if (tendered < part.Amount)
+                    {
+                        return Fail(Error.Validation($"The customer handed over {tendered:N2}, less than {part.Amount:N2}."));
+                    }
 
-            paymentNo = received.Value.DocumentNo;
-            methodName = received.Value.MethodName;
-            invoice.RecordPayment(order.GrandTotal);
-            order.RecordPayment(order.GrandTotal);
+                    change += Rounding.Money(tendered - part.Amount);
+                    cashTendered = (cashTendered ?? 0m) + tendered;
+                }
+
+                paymentNo = received.Value.DocumentNo;
+                methodName = parts.Count == 1 ? received.Value.MethodName : "Split";
+                invoice.RecordPayment(part.Amount);
+                order.RecordPayment(part.Amount);
+            }
         }
 
         order.MoveTo(SalesOrderStatus.Paid, userId, now);
@@ -186,7 +219,7 @@ public sealed class CompleteSalesOrderCommandHandler(
         }
 
         return Result.Success(new CompletedSale(
-            await views.BuildAsync(tenantId, order.Id, ct), invoiceNo, paymentNo, methodName, order.PaidAmount, change, loyaltyOutcome));
+            await views.BuildAsync(tenantId, order.Id, ct), invoiceNo, paymentNo, methodName, order.PaidAmount, change, loyaltyOutcome, cashTendered));
     }
 
     private static Result<CompletedSale> Fail(Error error) => Result.Failure<CompletedSale>(error);

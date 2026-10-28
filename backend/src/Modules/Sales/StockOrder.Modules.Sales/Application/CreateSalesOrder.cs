@@ -5,6 +5,7 @@ using StockOrder.Infrastructure.NumberSeries;
 using StockOrder.Infrastructure.Outbox;
 using StockOrder.Modules.Catalog.Contracts;
 using StockOrder.Modules.Inventory.Contracts;
+using StockOrder.Modules.Restaurant.Contracts;
 using StockOrder.Modules.Sales.Domain;
 using StockOrder.Modules.Sales.Infrastructure;
 using StockOrder.Modules.Tenancy.Contracts;
@@ -28,6 +29,8 @@ public sealed record CreateSalesOrderLine(Guid ProductId, decimal Quantity, stri
 /// <param name="Notes">Who the order is for, e.g. "Table 4" or "Ali, takeaway".</param>
 /// <param name="CustomerPhone">A visit-reward member's phone, noted for the cashier. A number that
 /// isn't a usable phone is dropped rather than refusing the order (it may come from a phone offline).</param>
+/// <param name="TableId">A dine-in order at a table (restaurant tables on): the table is taken until the order is paid or cancelled.</param>
+/// <param name="Covers">Guests at the table.</param>
 public sealed record CreateSalesOrderCommand(
     Guid BranchId,
     string Channel,
@@ -36,7 +39,9 @@ public sealed record CreateSalesOrderCommand(
     Guid? ClientDocumentId = null,
     Guid? SourceDeviceId = null,
     string? DeviceDocumentNo = null,
-    string? CustomerPhone = null) : ICommand<Result<SalesOrderView>>;
+    string? CustomerPhone = null,
+    Guid? TableId = null,
+    int? Covers = null) : ICommand<Result<SalesOrderView>>;
 
 public sealed class CreateSalesOrderCommandValidator : AbstractValidator<CreateSalesOrderCommand>
 {
@@ -47,6 +52,9 @@ public sealed class CreateSalesOrderCommandValidator : AbstractValidator<CreateS
             .WithMessage($"Channel must be one of: {string.Join(", ", SalesChannels.Supported)}.");
         RuleFor(c => c.Notes).MaximumLength(1000);
         RuleFor(c => c.DeviceDocumentNo).MaximumLength(40);
+        RuleFor(c => c.Covers).InclusiveBetween(1, 100);
+        RuleFor(c => c.Channel).Equal(SalesChannels.DineIn).When(c => c.TableId is not null)
+            .WithMessage("Only dine-in orders are taken at a table.");
         RuleFor(c => c.Lines).NotEmpty().WithMessage("Add at least one item.")
             .Must(l => l.Count <= 200).WithMessage("An order can have at most 200 lines.");
         RuleForEach(c => c.Lines).ChildRules(line =>
@@ -69,6 +77,8 @@ public sealed class CreateSalesOrderCommandHandler(
     INumberSeriesService numberSeries,
     IOutboxWriter outbox,
     SalesOrderViewBuilder views,
+    RestaurantOrders restaurant,
+    IDiningTables tables,
     IClock clock,
     IIdGenerator idGenerator)
     : ICommandHandler<CreateSalesOrderCommand, Result<SalesOrderView>>
@@ -117,18 +127,45 @@ public sealed class CreateSalesOrderCommandHandler(
             return Fail(lineError);
         }
 
+        var features = await restaurant.GetFeaturesAsync(tenantId, ct);
+        DiningTableInfo? table = null;
+        if (command.TableId is { } tableId)
+        {
+            table = await tables.GetAsync(tableId, ct);
+            if (!features.Tables || table is null || table.BranchId != command.BranchId)
+            {
+                return Fail(Error.NotFound("Table"));
+            }
+
+            if (!table.IsActive)
+            {
+                return Fail(Error.Validation($"Table {table.Name} is no longer in use."));
+            }
+
+            if (await db.SalesOrders.AnyAsync(o => o.TenantId == tenantId && o.OpenTableId == tableId, ct))
+            {
+                return Fail(TableTaken(table.Name));
+            }
+        }
+
         var now = clock.UtcNow;
         var order = SalesOrder.CreateDraft(
             tenantId, idGenerator.NewId(), command.Channel, walkIn.Id, command.BranchId, warehouseId, businessDate,
             command.Notes, command.ClientDocumentId, command.SourceDeviceId, command.DeviceDocumentNo, currentUser.UserId, now);
         order.NoteLoyaltyPhone(PhoneNumbers.Normalize(command.CustomerPhone));
+        if (table is not null)
+        {
+            order.SeatAt(table.Id, command.Covers, currentUser.UserId);
+        }
+
+        var added = new List<(SalesOrderLine, SaleLineQuote)>();
         for (var i = 0; i < command.Lines.Count; i++)
         {
             var line = command.Lines[i];
             var quote = quotes[i];
-            order.AddLine(
+            added.Add((order.AddLine(
                 idGenerator.NewId(), quote.ProductId, quote.UomId, line.Quantity, Rounding.QtyBase(line.Quantity * quote.FactorToBase),
-                quote.UnitPrice!.Value, quote.TaxCodeId, quote.TaxRatePercent, line.Notes);
+                quote.UnitPrice!.Value, quote.TaxCodeId, quote.TaxRatePercent, line.Notes), quote));
         }
 
         // Submit, then the automatic checks (section 8.6). Credit control only applies to customers
@@ -136,16 +173,36 @@ public sealed class CreateSalesOrderCommandHandler(
         order.MoveTo(SalesOrderStatus.Submitted, currentUser.UserId, now);
         order.MoveTo(SalesOrderStatus.Confirmed, currentUser.UserId, now);
         order.AssignDocumentNo(await numberSeries.NextAsync(tenantId, SalesDocumentTypes.SalesOrder, command.BranchId, ct));
+        var kitchenDate = businessDate;
+        if (features.Kitchen)
+        {
+            (var orderNo, kitchenDate) = await restaurant.NextOrderNoAsync(tenantId, command.BranchId, ct);
+            order.AssignOrderNo(orderNo);
+        }
 
         db.SalesOrders.Add(order);
-        await db.SaveChangesAsync(ct);
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateException ex) when (table is not null && SqlErrors.IsUniqueViolation(ex))
+        {
+            // Another waiter opened the same table a moment ago (UX_SO_OpenTable).
+            return Fail(TableTaken(table.Name));
+        }
+
+        if (features.Kitchen)
+        {
+            await restaurant.SendRoundAsync(order, kitchenDate, added, table?.Name, command.Notes, ct);
+        }
+
         await SalesEvents.WriteAsync(outbox, order, SalesOrderStatus.Submitted, ct);
         await SalesEvents.WriteAsync(outbox, order, SalesOrderStatus.Confirmed, ct);
 
         return Result.Success(await views.BuildAsync(tenantId, order.Id, ct));
     }
 
-    private static Error? CheckLines(IReadOnlyList<CreateSalesOrderLine> lines, IReadOnlyList<SaleLineQuote> quotes)
+    internal static Error? CheckLines(IReadOnlyList<CreateSalesOrderLine> lines, IReadOnlyList<SaleLineQuote> quotes)
     {
         var problems = new Dictionary<string, object?>();
         var onlyMissingPrices = true;
@@ -172,7 +229,7 @@ public sealed class CreateSalesOrderCommandHandler(
         return new Error(code, message, new Dictionary<string, object?> { ["errors"] = problems });
     }
 
-    private static (string? Problem, bool IsMissingPrice) CheckLine(CreateSalesOrderLine line, SaleLineQuote quote)
+    internal static (string? Problem, bool IsMissingPrice) CheckLine(CreateSalesOrderLine line, SaleLineQuote quote)
     {
         var problem = quote.Availability switch
         {
@@ -195,7 +252,17 @@ public sealed class CreateSalesOrderCommandHandler(
         return quote.UnitPrice is null ? ($"{quote.Name} has no price at this branch.", true) : (null, false);
     }
 
+    private static Error TableTaken(string tableName) =>
+        Error.Conflict(ErrorCodes.Duplicate, $"Table {tableName} already has an open order. Add to that order instead.");
+
     private static Result<SalesOrderView> Fail(Error error) => Result.Failure<SalesOrderView>(error);
+}
+
+internal static class SqlErrors
+{
+    /// <summary>2601/2627: a unique index or constraint refused the row.</summary>
+    public static bool IsUniqueViolation(DbUpdateException ex) =>
+        ex.InnerException is Microsoft.Data.SqlClient.SqlException { Number: 2601 or 2627 };
 }
 
 public static class SalesDocumentTypes

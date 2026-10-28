@@ -16,6 +16,8 @@ public static class SalesModule
         services.AddScoped<SalesOrderViewBuilder>();
         services.AddScoped<LoyaltyStore>();
         services.AddScoped<LoyaltyCheckout>();
+        services.AddScoped<RestaurantOrders>();
+        services.AddScoped<StockOrder.Modules.Sales.Contracts.IOpenTableOrders, OpenTableOrders>();
         services.AddScoped<ISyncCommandHandler, CreateSalesOrderSyncHandler>();
         services.AddScoped<ISyncSource, OpenOrdersSyncSource>();
         services.AddScoped<ISyncSource, LoyaltyBranchesSyncSource>();

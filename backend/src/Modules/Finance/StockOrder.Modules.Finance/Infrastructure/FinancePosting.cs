@@ -36,6 +36,13 @@ internal sealed class FinancePosting(
             .Select(s => new OpenCashSession(s.Id, s.BusinessDate))
             .FirstOrDefaultAsync(ct);
 
+    public async Task<DateOnly?> GetOpenBusinessDateAsync(Guid branchId, CancellationToken ct) =>
+        await db.CashSessions
+            .Where(s => s.TenantId == currentUser.TenantId && s.BranchId == branchId && s.Status == CashSession.Open)
+            .OrderBy(s => s.BusinessDate)
+            .Select(s => (DateOnly?)s.BusinessDate)
+            .FirstOrDefaultAsync(ct);
+
     public async Task DebitCustomerAsync(CustomerLedgerPosting posting, CancellationToken ct) =>
         await InsertLedgerAsync(posting.CustomerId, posting.DocumentType, posting.DocumentId, posting.DocumentNo, posting.Amount, 0m, posting.BusinessDate, ct);
 

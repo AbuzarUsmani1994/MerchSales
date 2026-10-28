@@ -63,6 +63,12 @@ public static class ReceiptPdf
                     col.Item().PaddingTop(2).AlignCenter().Text("*** COPY ***").Bold();
                 }
 
+                if (r.ShortOrderNo is { } shortNo)
+                {
+                    col.Item().PaddingTop(3).AlignCenter().Text(r.TableName is { } tableName ? $"Order #{shortNo} · Table {tableName}" : $"Order #{shortNo}")
+                        .Bold().FontSize(16);
+                }
+
                 Rule(col);
                 Pair(col, "Receipt", r.ReceiptNo ?? r.InvoiceNo, bold: true);
                 Pair(col, "Invoice", r.InvoiceNo);

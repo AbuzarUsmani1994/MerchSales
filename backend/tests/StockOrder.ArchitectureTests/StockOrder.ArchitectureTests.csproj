@@ -23,6 +23,8 @@
     <ProjectReference Include="..\..\src\Modules\Finance\StockOrder.Modules.Finance.Contracts\StockOrder.Modules.Finance.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Modules\Sales\StockOrder.Modules.Sales\StockOrder.Modules.Sales.csproj" />
     <ProjectReference Include="..\..\src\Modules\Sales\StockOrder.Modules.Sales.Contracts\StockOrder.Modules.Sales.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Restaurant\StockOrder.Modules.Restaurant\StockOrder.Modules.Restaurant.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Restaurant\StockOrder.Modules.Restaurant.Contracts\StockOrder.Modules.Restaurant.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Hosts\StockOrder.Api\StockOrder.Api.csproj" />
   </ItemGroup>
 

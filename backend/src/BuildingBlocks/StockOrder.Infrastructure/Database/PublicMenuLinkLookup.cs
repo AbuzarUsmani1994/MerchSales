@@ -15,6 +15,18 @@ public static class PublicMenuSettings
     public static string KeyFor(Guid branchId) => KeyPrefix + branchId.ToString("D");
 }
 
+/// <summary>
+/// A restaurant branch's customer order screen link (docs/decisions.md, "Tables and kitchen
+/// screen"): the hall TV's "Now preparing / Ready" page, stored as tenant setting
+/// <c>OrderScreen.Code.{branchId}</c>, the same way as the menu link.
+/// </summary>
+public static class OrderScreenSettings
+{
+    public const string KeyPrefix = "OrderScreen.Code.";
+
+    public static string KeyFor(Guid branchId) => KeyPrefix + branchId.ToString("D");
+}
+
 public sealed record PublicMenuLink(
     Guid TenantId,
     string TenantName,
@@ -35,35 +47,39 @@ public sealed record PublicMenuLink(
 /// </summary>
 public interface IPublicMenuLinkLookup
 {
-    Task<PublicMenuLink?> FindAsync(string code, CancellationToken ct);
+    /// <param name="keyPrefix">Which kind of link: <see cref="PublicMenuSettings.KeyPrefix"/> (default) or <see cref="OrderScreenSettings.KeyPrefix"/>.</param>
+    Task<PublicMenuLink?> FindAsync(string code, CancellationToken ct, string keyPrefix = PublicMenuSettings.KeyPrefix);
 
     /// <summary>Called when a link is switched off or replaced, so the old code stops working at once.</summary>
-    Task ForgetAsync(string code, CancellationToken ct);
+    Task ForgetAsync(string code, CancellationToken ct, string keyPrefix = PublicMenuSettings.KeyPrefix);
 }
 
 internal sealed class PublicMenuLinkLookup(IBypassConnectionFactory bypassFactory, HybridCache cache) : IPublicMenuLinkLookup
 {
     private static readonly HybridCacheEntryOptions CacheOptions = new() { Expiration = TimeSpan.FromMinutes(1), LocalCacheExpiration = TimeSpan.FromMinutes(1) };
 
-    public async Task<PublicMenuLink?> FindAsync(string code, CancellationToken ct)
+    public async Task<PublicMenuLink?> FindAsync(string code, CancellationToken ct, string keyPrefix = PublicMenuSettings.KeyPrefix)
     {
-        if (!PublicMenuCode.IsWellFormed(code))
+        if (!PublicMenuCode.IsWellFormed(code) || !IsKnownPrefix(keyPrefix))
         {
             return null;
         }
 
         var found = await cache.GetOrCreateAsync(
-            CacheKey(code),
-            async token => new CachedLink(await QueryAsync(code, token)),
+            CacheKey(code, keyPrefix),
+            async token => new CachedLink(await QueryAsync(code, keyPrefix, token)),
             CacheOptions,
             cancellationToken: ct);
         return found.Link;
     }
 
-    public Task ForgetAsync(string code, CancellationToken ct) =>
-        PublicMenuCode.IsWellFormed(code) ? cache.RemoveAsync(CacheKey(code), ct).AsTask() : Task.CompletedTask;
+    public Task ForgetAsync(string code, CancellationToken ct, string keyPrefix = PublicMenuSettings.KeyPrefix) =>
+        PublicMenuCode.IsWellFormed(code) ? cache.RemoveAsync(CacheKey(code, keyPrefix), ct).AsTask() : Task.CompletedTask;
 
-    private async Task<PublicMenuLink?> QueryAsync(string code, CancellationToken ct)
+    private static bool IsKnownPrefix(string keyPrefix) =>
+        keyPrefix is PublicMenuSettings.KeyPrefix or OrderScreenSettings.KeyPrefix;
+
+    private async Task<PublicMenuLink?> QueryAsync(string code, string keyPrefix, CancellationToken ct)
     {
         await using var connection = await bypassFactory.OpenAsync(ct);
         var rows = (await connection.QueryAsync<LinkRow>(new CommandDefinition(
@@ -77,7 +93,7 @@ internal sealed class PublicMenuLinkLookup(IBypassConnectionFactory bypassFactor
                  AND b.Id = TRY_CONVERT(uniqueidentifier, SUBSTRING(s.SettingKey, @prefixLength + 1, 36))
             WHERE s.SettingKey LIKE @keyPattern AND s.Value = @code;
             """,
-            new { code, prefixLength = PublicMenuSettings.KeyPrefix.Length, keyPattern = PublicMenuSettings.KeyPrefix + "%" },
+            new { code, prefixLength = keyPrefix.Length, keyPattern = keyPrefix + "%" },
             cancellationToken: ct))).ToList();
 
         // Codes are random; two matches would mean a collision, and showing either menu could be wrong.
@@ -92,7 +108,7 @@ internal sealed class PublicMenuLinkLookup(IBypassConnectionFactory bypassFactor
             r.BranchId, r.BranchName, r.BranchAddress, r.BranchPhone, r.BranchIsActive);
     }
 
-    private static string CacheKey(string code) => $"public-menu:{code}";
+    private static string CacheKey(string code, string keyPrefix) => $"public-link:{keyPrefix}{code}";
 
     private sealed record CachedLink(PublicMenuLink? Link);
 

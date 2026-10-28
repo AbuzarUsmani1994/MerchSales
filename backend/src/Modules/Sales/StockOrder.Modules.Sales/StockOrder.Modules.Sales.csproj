@@ -8,6 +8,7 @@
     <ProjectReference Include="..\..\Finance\StockOrder.Modules.Finance.Contracts\StockOrder.Modules.Finance.Contracts.csproj" />
     <ProjectReference Include="..\..\Identity\StockOrder.Modules.Identity.Contracts\StockOrder.Modules.Identity.Contracts.csproj" />
     <ProjectReference Include="..\..\Inventory\StockOrder.Modules.Inventory.Contracts\StockOrder.Modules.Inventory.Contracts.csproj" />
+    <ProjectReference Include="..\..\Restaurant\StockOrder.Modules.Restaurant.Contracts\StockOrder.Modules.Restaurant.Contracts.csproj" />
     <ProjectReference Include="..\..\Sync\StockOrder.Modules.Sync.Contracts\StockOrder.Modules.Sync.Contracts.csproj" />
     <ProjectReference Include="..\..\Tenancy\StockOrder.Modules.Tenancy.Contracts\StockOrder.Modules.Tenancy.Contracts.csproj" />
   </ItemGroup>

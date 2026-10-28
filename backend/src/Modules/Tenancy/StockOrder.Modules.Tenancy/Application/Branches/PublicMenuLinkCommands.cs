@@ -13,10 +13,17 @@ namespace StockOrder.Modules.Tenancy.Application.Branches;
 /// <summary>A branch's customer menu link: the code a waiter's QR opens, or switched off (null).</summary>
 public sealed record PublicMenuLinkView(Guid BranchId, bool IsOn, string? Code);
 
-public sealed record GetPublicMenuLinkQuery(Guid BranchId) : IQuery<Result<PublicMenuLinkView>>;
+/// <summary>The two no-login branch pages: the customer menu (QR) and the order screen on the hall TV.</summary>
+public enum PublicLinkKind
+{
+    Menu,
+    OrderScreen,
+}
+
+public sealed record GetPublicMenuLinkQuery(Guid BranchId, PublicLinkKind Kind = PublicLinkKind.Menu) : IQuery<Result<PublicMenuLinkView>>;
 
 /// <param name="On">True issues a new code (the old QR, if any, stops working); false switches the link off.</param>
-public sealed record SetPublicMenuLinkCommand(Guid BranchId, bool On) : ICommand<Result<PublicMenuLinkView>>;
+public sealed record SetPublicMenuLinkCommand(Guid BranchId, bool On, PublicLinkKind Kind = PublicLinkKind.Menu) : ICommand<Result<PublicMenuLinkView>>;
 
 public sealed class GetPublicMenuLinkQueryHandler(TenancyDbContext db, ICurrentUserContext currentUser, IAccessScope accessScope)
     : IQueryHandler<GetPublicMenuLinkQuery, Result<PublicMenuLinkView>>
@@ -28,7 +35,7 @@ public sealed class GetPublicMenuLinkQueryHandler(TenancyDbContext db, ICurrentU
             return Result.Failure<PublicMenuLinkView>(error);
         }
 
-        var key = PublicMenuSettings.KeyFor(query.BranchId);
+        var key = PublicMenuLinkRules.KeyFor(query.Kind, query.BranchId);
         var code = await db.TenantSettings
             .Where(s => s.TenantId == currentUser.TenantId && s.SettingKey == key)
             .Select(s => s.Value)
@@ -48,7 +55,7 @@ public sealed class SetPublicMenuLinkCommandHandler(
             return Result.Failure<PublicMenuLinkView>(error);
         }
 
-        var key = PublicMenuSettings.KeyFor(command.BranchId);
+        var key = PublicMenuLinkRules.KeyFor(command.Kind, command.BranchId);
         var newValue = command.On ? PublicMenuCode.New() : string.Empty;
         var setting = await db.TenantSettings.FirstOrDefaultAsync(s => s.TenantId == currentUser.TenantId && s.SettingKey == key, ct);
         var oldCode = setting?.Value;
@@ -67,7 +74,7 @@ public sealed class SetPublicMenuLinkCommandHandler(
         await db.SaveChangesAsync(ct);
         if (!string.IsNullOrEmpty(oldCode))
         {
-            await lookup.ForgetAsync(oldCode, ct);
+            await lookup.ForgetAsync(oldCode, ct, PublicMenuLinkRules.PrefixFor(command.Kind));
         }
 
         return Result.Success(PublicMenuLinkRules.View(command.BranchId, newValue));
@@ -89,8 +96,13 @@ internal static class PublicMenuLinkRules
         var industry = await db.Tenants.Where(t => t.Id == currentUser.TenantId).Select(t => t.Industry).FirstOrDefaultAsync(ct);
         return industry == TenantIndustry.Restaurant
             ? null
-            : Error.Validation("The customer menu is only available for restaurants.");
+            : Error.Validation("Customer pages are only available for restaurants.");
     }
+
+    public static string PrefixFor(PublicLinkKind kind) =>
+        kind == PublicLinkKind.OrderScreen ? OrderScreenSettings.KeyPrefix : PublicMenuSettings.KeyPrefix;
+
+    public static string KeyFor(PublicLinkKind kind, Guid branchId) => PrefixFor(kind) + branchId.ToString("D");
 
     public static PublicMenuLinkView View(Guid branchId, string? code) =>
         string.IsNullOrEmpty(code) ? new(branchId, false, null) : new(branchId, true, code);

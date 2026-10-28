@@ -23,6 +23,8 @@ using StockOrder.Modules.Inventory;
 using StockOrder.Modules.Sync;
 using StockOrder.Modules.Platform;
 using StockOrder.Modules.Platform.Infrastructure.Bootstrap;
+using StockOrder.Modules.Restaurant;
+using StockOrder.Modules.Restaurant.Infrastructure;
 using StockOrder.Modules.Sales;
 using StockOrder.Modules.Tenancy;
 
@@ -48,6 +50,7 @@ builder.Services.AddSyncModule();
 builder.Services.AddCatalogModule();
 builder.Services.AddFinanceModule();
 builder.Services.AddSalesModule();
+builder.Services.AddRestaurantModule();
 
 builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Tenancy.TenancyModule).Assembly);
 builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Identity.IdentityModule).Assembly);
@@ -57,6 +60,7 @@ builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Sync.SyncMo
 builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Catalog.CatalogModule).Assembly);
 builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Finance.FinanceModule).Assembly);
 builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Sales.SalesModule).Assembly);
+builder.Services.AddValidatorsFromAssembly(typeof(StockOrder.Modules.Restaurant.RestaurantModule).Assembly);
 
 builder.Services.AddMediator(options =>
 {
@@ -83,6 +87,23 @@ builder.Services.AddOptions<JwtBearerOptions>(JwtBearerDefaults.AuthenticationSc
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new X509SecurityKey(certificateProvider.Certificate),
             ClockSkew = TimeSpan.FromSeconds(30),
+        };
+
+        // Browsers can't set headers on a WebSocket, so the kitchen screen's live connection
+        // sends its token in the query string; only for the hubs, never for the API. Request
+        // logging records the path only, so the token isn't written to the logs.
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                if (context.Request.Path.StartsWithSegments(UnitOfWorkMiddleware.HubsPath) &&
+                    context.Request.Query["access_token"].ToString() is { Length: > 0 } token)
+                {
+                    context.Token = token;
+                }
+
+                return Task.CompletedTask;
+            },
         };
     });
 
@@ -129,7 +150,7 @@ builder.Services.AddRateLimiter(options =>
             }));
 
     options.GlobalLimiter = System.Threading.RateLimiting.PartitionedRateLimiter.Create<HttpContext, string>(httpContext =>
-        httpContext.Request.Path.StartsWithSegments("/m")
+        httpContext.Request.Path.StartsWithSegments("/m") || httpContext.Request.Path.StartsWithSegments("/s")
             ? System.Threading.RateLimiting.RateLimitPartition.GetNoLimiter("public-menu")
             : System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(
                 httpContext.User.FindFirst("sub")?.Value ?? httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
@@ -191,6 +212,7 @@ app.UseMiddleware<UnitOfWorkMiddleware>();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<KitchenHub>(KitchenHub.Path);
 
 app.MapHealthChecks("/health/live");
 app.MapHealthChecks("/health/ready", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions

@@ -6,6 +6,7 @@
     <ProjectReference Include="..\..\src\Modules\Sync\StockOrder.Modules.Sync\StockOrder.Modules.Sync.csproj" />
     <ProjectReference Include="..\..\src\Modules\Catalog\StockOrder.Modules.Catalog\StockOrder.Modules.Catalog.csproj" />
     <ProjectReference Include="..\..\src\Modules\Sales\StockOrder.Modules.Sales\StockOrder.Modules.Sales.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Restaurant\StockOrder.Modules.Restaurant\StockOrder.Modules.Restaurant.csproj" />
   </ItemGroup>
 
   <ItemGroup>

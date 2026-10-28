@@ -18,5 +18,12 @@ public interface IUnitOfWork : IAsyncDisposable
     Task InitializeAsync(Guid tenantId, CancellationToken ct);
 
     Task CommitAsync(CancellationToken ct);
+
+    /// <summary>
+    /// Runs <paramref name="callback"/> once the transaction has committed, never on rollback:
+    /// for telling screens (the kitchen board) about changes that are really saved. A failing
+    /// callback is logged and doesn't affect the request.
+    /// </summary>
+    void OnCommitted(Func<Task> callback);
     Task RollbackAsync(CancellationToken ct);
 }

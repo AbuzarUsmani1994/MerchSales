@@ -352,7 +352,7 @@ internal static class BranchPriceLists
     }
 }
 
-public sealed record CreateCategoryCommand(string Name, int SortOrder) : ICommand<Result<Guid>>;
+public sealed record CreateCategoryCommand(string Name, int SortOrder, bool SendToKitchen = true) : ICommand<Result<Guid>>;
 
 public sealed class CreateCategoryCommandValidator : AbstractValidator<CreateCategoryCommand>
 {
@@ -371,14 +371,14 @@ public sealed class CreateCategoryCommandHandler(CatalogDbContext db, ICurrentUs
             return Result.Failure<Guid>(Error.Conflict(ErrorCodes.Duplicate, $"Category '{name}' already exists."));
         }
 
-        var category = Category.Create(currentUser.TenantId, idGenerator.NewId(), name, command.SortOrder, clock.UtcNow, currentUser.UserId);
+        var category = Category.Create(currentUser.TenantId, idGenerator.NewId(), name, command.SortOrder, command.SendToKitchen, clock.UtcNow, currentUser.UserId);
         db.Categories.Add(category);
         await db.SaveChangesAsync(ct);
         return Result.Success(category.Id);
     }
 }
 
-public sealed record UpdateCategoryCommand(Guid Id, string Name, int SortOrder, bool IsActive) : ICommand<Result>;
+public sealed record UpdateCategoryCommand(Guid Id, string Name, int SortOrder, bool IsActive, bool SendToKitchen = true) : ICommand<Result>;
 
 public sealed class UpdateCategoryCommandValidator : AbstractValidator<UpdateCategoryCommand>
 {
@@ -402,7 +402,7 @@ public sealed class UpdateCategoryCommandHandler(CatalogDbContext db, ICurrentUs
             return Result.Failure(Error.Conflict(ErrorCodes.Duplicate, $"Category '{name}' already exists."));
         }
 
-        category.Update(name, command.SortOrder, command.IsActive, clock.UtcNow, currentUser.UserId);
+        category.Update(name, command.SortOrder, command.IsActive, command.SendToKitchen, clock.UtcNow, currentUser.UserId);
         await db.SaveChangesAsync(ct);
         return Result.Success();
     }

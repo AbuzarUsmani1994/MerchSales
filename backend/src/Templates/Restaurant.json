@@ -65,6 +65,7 @@
         "Sales.View", "Sales.Customer.Manage", "Sales.Order.Create", "Sales.Order.Confirm", "Sales.Order.Fulfil",
         "Sales.Order.Cancel", "Sales.Price.Override", "Sales.Discount.Apply", "Sales.Credit.Override",
         "Sales.Invoice.Post", "Sales.Invoice.Cancel", "Sales.Return.Post", "Sales.Loyalty.Manage",
+        "Restaurant.Tables.Manage", "Restaurant.Kitchen.Operate", "Restaurant.Kitchen.Serve",
         "Finance.Payment.Receive", "Finance.Payment.Make", "Finance.CashSession.Operate", "Finance.CashSession.Close",
         "Finance.Ledger.View", "Finance.Period.Close",
         "Reports.Stock.View", "Reports.Sales.View", "Reports.Purchasing.View", "Reports.Financial.View", "Reports.Export",
@@ -78,18 +79,18 @@
         "Catalog.View", "Inventory.View", "Sales.View", "Sales.Customer.Manage",
         "Sales.Order.Create", "Sales.Order.Confirm", "Sales.Order.Fulfil", "Sales.Invoice.Post",
         "Finance.Payment.Receive", "Finance.CashSession.Operate", "Finance.CashSession.Close",
-        "Reports.Sales.View", "Mobile.Use"
+        "Restaurant.Kitchen.Serve", "Reports.Sales.View", "Mobile.Use"
       ]
     },
     {
       "name": "Waiter",
       "isSystem": true,
-      "permissions": [ "Catalog.View", "Sales.View", "Sales.Order.Create", "Sales.Order.Fulfil", "Mobile.Use" ]
+      "permissions": [ "Catalog.View", "Sales.View", "Sales.Order.Create", "Sales.Order.Fulfil", "Restaurant.Kitchen.Serve", "Mobile.Use" ]
     },
     {
       "name": "Kitchen",
       "isSystem": true,
-      "permissions": [ "Catalog.View", "Sales.View", "Mobile.Use" ]
+      "permissions": [ "Catalog.View", "Sales.View", "Restaurant.Kitchen.Operate", "Restaurant.Kitchen.Serve", "Mobile.Use" ]
     },
     {
       "name": "StoreKeeper",

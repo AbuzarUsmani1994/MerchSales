@@ -93,6 +93,20 @@ public sealed class SalesOrder : AuditedTenantEntity
     public string? CancelNotes { get; private set; }
     public int Version { get; private set; } = 1;
 
+    // Restaurant pack (016_RestaurantPack).
+
+    /// <summary>The table the order was taken at; kept after the order closes, for reports.</summary>
+    public Guid? TableId { get; private set; }
+
+    /// <summary>Same as <see cref="TableId"/> while the order is open, null after: the database allows one open order per table.</summary>
+    public Guid? OpenTableId { get; private set; }
+    public int? Covers { get; private set; }
+    public Guid? ServerUserId { get; private set; }
+
+    /// <summary>The short daily number (#23) for the kitchen and the customer; null outside restaurants.</summary>
+    public int? OrderNo { get; private set; }
+    public DateTime? BillRequestedAtUtc { get; private set; }
+
     public IReadOnlyList<SalesOrderLine> Lines => _lines;
     public IReadOnlyList<SalesOrderStatusChange> StatusHistory => _statusHistory;
 
@@ -127,13 +141,15 @@ public sealed class SalesOrder : AuditedTenantEntity
         return order;
     }
 
-    public void AddLine(Guid lineId, Guid productId, Guid uomId, decimal quantity, decimal qtyBase, decimal unitPrice,
+    public SalesOrderLine AddLine(Guid lineId, Guid productId, Guid uomId, decimal quantity, decimal qtyBase, decimal unitPrice,
         Guid? taxCodeId, decimal taxRatePercent, string? notes)
     {
         var amounts = LineMath.Compute(quantity, unitPrice, discountPercent: 0m, taxRatePercent);
-        _lines.Add(SalesOrderLine.Create(
-            TenantId, lineId, Id, _lines.Count + 1, productId, uomId, quantity, qtyBase, unitPrice, amounts, taxCodeId, taxRatePercent, notes));
+        var line = SalesOrderLine.Create(
+            TenantId, lineId, Id, _lines.Count + 1, productId, uomId, quantity, qtyBase, unitPrice, amounts, taxCodeId, taxRatePercent, notes);
+        _lines.Add(line);
         RecalculateTotals();
+        return line;
     }
 
     /// <summary>Moves the order along the section 8.6 table, recording the change; INVALID_STATE_TRANSITION otherwise.</summary>
@@ -152,6 +168,11 @@ public sealed class SalesOrder : AuditedTenantEntity
         _statusHistory.Add(SalesOrderStatusChange.Create(TenantId, Id, Status, to, userId, now, reason));
         Status = to;
         MarkUpdated(now, userId);
+        if (to is SalesOrderStatus.Closed or SalesOrderStatus.Cancelled)
+        {
+            OpenTableId = null;
+        }
+
         switch (to)
         {
             case SalesOrderStatus.Confirmed:
@@ -179,6 +200,47 @@ public sealed class SalesOrder : AuditedTenantEntity
                 break;
         }
 
+        return null;
+    }
+
+    /// <summary>A dine-in order at a table; the table stays taken until the order is paid or cancelled.</summary>
+    public void SeatAt(Guid tableId, int? covers, Guid serverUserId)
+    {
+        TableId = tableId;
+        OpenTableId = tableId;
+        Covers = covers;
+        ServerUserId = serverUserId;
+    }
+
+    public void AssignOrderNo(int orderNo) => OrderNo = orderNo;
+
+    /// <summary>
+    /// The guests order more: allowed while the order is Confirmed (section 8.6 amendments; nothing
+    /// is reserved yet, so there is nothing to re-reserve). A bill asked for earlier no longer
+    /// shows everything, so the request is cleared.
+    /// </summary>
+    public Error? StartAmendment(Guid userId, DateTime now)
+    {
+        if (Status != SalesOrderStatus.Confirmed)
+        {
+            return Error.Conflict(ErrorCodes.InvalidStateTransition, $"Items can only be added to a confirmed order; this one is {Status}.");
+        }
+
+        Version += 1;
+        BillRequestedAtUtc = null;
+        MarkUpdated(now, userId);
+        return null;
+    }
+
+    public Error? RequestBill(Guid userId, DateTime now)
+    {
+        if (Status != SalesOrderStatus.Confirmed)
+        {
+            return Error.Conflict(ErrorCodes.InvalidStateTransition, $"The bill can only be asked for on a confirmed order; this one is {Status}.");
+        }
+
+        BillRequestedAtUtc ??= now;
+        MarkUpdated(now, userId);
         return null;
     }
 

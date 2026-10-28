@@ -7,12 +7,16 @@ namespace StockOrder.Infrastructure.Database;
 /// Commits the request's transaction on a successful (&lt; 400) response, rolls it back
 /// otherwise — including on an unhandled exception. Runs after authentication, so
 /// <see cref="ICurrentUserContext"/> already has the tenant from the validated token.
+/// Live-update connections (<see cref="HubsPath"/>) are skipped: a kitchen screen keeps one open
+/// for hours, and must not hold a database connection and transaction all that time.
 /// </summary>
 public sealed class UnitOfWorkMiddleware(RequestDelegate next)
 {
+    public const string HubsPath = "/hubs";
+
     public async Task InvokeAsync(HttpContext context, IUnitOfWork unitOfWork, ICurrentUserContext currentUser)
     {
-        if (!currentUser.IsAuthenticated)
+        if (!currentUser.IsAuthenticated || context.Request.Path.StartsWithSegments(HubsPath))
         {
             await next(context);
             return;

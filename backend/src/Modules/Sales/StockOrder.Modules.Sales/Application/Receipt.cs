@@ -24,6 +24,7 @@ public sealed record ReceiptMember(string Name, string Phone, int Visits, int Vi
 /// <summary>Everything printed on a counter receipt (section 16: 80 mm, branch name and address in the header).</summary>
 /// <param name="Tendered">Cash handed over, and <paramref name="Change"/>, only on the first print: they aren't stored.</param>
 /// <param name="IsCopy">A reprint, marked "COPY" so it can't pass as a second sale.</param>
+/// <param name="ShortOrderNo">The restaurant's daily number (#23) the customer listens for; printed large.</param>
 public sealed record ReceiptModel(
     string CompanyName,
     string BranchName,
@@ -44,7 +45,9 @@ public sealed record ReceiptModel(
     decimal? Tendered,
     decimal? Change,
     ReceiptMember? Member,
-    bool IsCopy);
+    bool IsCopy,
+    int? ShortOrderNo = null,
+    string? TableName = null);
 
 /// <summary>The receipt of a paid order, as a PDF for the till's printer.</summary>
 public sealed record GetReceiptQuery(Guid OrderId, decimal? Tendered, bool IsCopy) : IQuery<Result<byte[]>>;
@@ -59,6 +62,7 @@ public sealed class GetReceiptQueryHandler(
     IUserDirectory users,
     ISalesCatalog catalog,
     LoyaltyStore loyalty,
+    StockOrder.Modules.Restaurant.Contracts.IDiningTables tables,
     IClock clock)
     : IQueryHandler<GetReceiptQuery, Result<byte[]>>
 {
@@ -116,7 +120,9 @@ public sealed class GetReceiptQueryHandler(
             tendered,
             change,
             await MemberAsync(order, timeZone, ct),
-            query.IsCopy);
+            query.IsCopy,
+            order.OrderNo,
+            order.TableId is { } tableId ? (await tables.GetAsync(tableId, ct))?.Name : null);
 
         return Result.Success(ReceiptPdf.Render(model));
     }

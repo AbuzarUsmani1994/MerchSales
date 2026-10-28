@@ -27,6 +27,7 @@ public static class SchemaVersionChecker
         "013_SelfServicePermission",
         "014_BranchCatalog",
         "015_Loyalty",
+        "016_RestaurantPack",
     ];
 
     public static async Task EnsureAppliedAsync(IOptions<DatabaseOptions> options, CancellationToken ct)
