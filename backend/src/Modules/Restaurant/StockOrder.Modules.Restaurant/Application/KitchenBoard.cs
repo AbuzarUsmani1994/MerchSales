@@ -117,6 +117,43 @@ public sealed class KitchenTicketActionCommandHandler(
     }
 }
 
+/// <summary>
+/// The waiter took a table's ready food out: every ready round of the order becomes Served.
+/// Serving is harmless to repeat, so no If-Match: whatever is ready now is what went out.
+/// </summary>
+public sealed record ServeReadyRoundsCommand(Guid OrderId) : ICommand<Result<int>>;
+
+public sealed class ServeReadyRoundsCommandHandler(
+    RestaurantDbContext db, ICurrentUserContext currentUser, IAccessScope accessScope, IKitchenBoardNotifier notifier, IClock clock)
+    : ICommandHandler<ServeReadyRoundsCommand, Result<int>>
+{
+    public async ValueTask<Result<int>> Handle(ServeReadyRoundsCommand command, CancellationToken ct)
+    {
+        var tickets = await db.KitchenTickets
+            .Where(t => t.TenantId == currentUser.TenantId && t.SalesOrderId == command.OrderId && t.Status == KitchenTicketStatus.Ready)
+            .ToListAsync(ct);
+        var grants = await accessScope.GetGrantsAsync(ct);
+        if (tickets.Any(t => !BranchScope.For(grants, RestaurantPermissions.KitchenServe).Covers(t.BranchId)))
+        {
+            return Result.Failure<int>(Error.NotFound("Order"));
+        }
+
+        var now = clock.UtcNow;
+        foreach (var ticket in tickets)
+        {
+            ticket.Apply(KitchenAction.Serve, currentUser.UserId, now);
+        }
+
+        if (tickets.Count > 0)
+        {
+            await db.SaveChangesAsync(ct);
+            notifier.BranchChanged(tickets[0].BranchId);
+        }
+
+        return Result.Success(tickets.Count);
+    }
+}
+
 /// <summary>"Now preparing / Ready to collect" for the hall TV: order numbers only, takeaway and counter orders (not tables).</summary>
 public sealed record OrderScreenView(string TenantName, string BranchName, IReadOnlyList<int> Preparing, IReadOnlyList<int> Ready, DateTime ServerTimeUtc);
 

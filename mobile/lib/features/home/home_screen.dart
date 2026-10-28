@@ -74,6 +74,7 @@ class HomeScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 16),
             const _OfflineBanner(),
+            const _TablesCard(),
             const _OrderingCard(),
             const _MenuQrCard(),
             const _SyncCard(),
@@ -185,6 +186,7 @@ class _OrderingCard extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     if ((ref.watch(orderBranchesProvider).value ?? const []).isEmpty) return const SizedBox.shrink();
 
+    final tablesOn = ref.watch(tablesEnabledProvider).value ?? false;
     Widget action(Key key, IconData icon, String title, String subtitle, String route, {bool primary = false}) => Expanded(
       child: Material(
         color: primary ? context.palette.primary : Colors.white,
@@ -192,7 +194,11 @@ class _OrderingCard extends ConsumerWidget {
         child: InkWell(
           key: key,
           borderRadius: BorderRadius.circular(16),
-          onTap: () => context.push(route),
+          onTap: () {
+            // Leaving a table's unsent order behind: a new order starts empty, not at that table.
+            if (route == '/order' && ref.read(cartProvider).table != null) ref.read(cartProvider.notifier).clear();
+            context.push(route);
+          },
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -217,10 +223,57 @@ class _OrderingCard extends ConsumerWidget {
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
         children: [
-          action(const Key('home-new-order'), Icons.add_shopping_cart, l10n.newOrder, l10n.newOrderHint, '/order', primary: true),
+          action(const Key('home-new-order'), tablesOn ? Icons.takeout_dining : Icons.add_shopping_cart, l10n.newOrder,
+              tablesOn ? l10n.newTakeawayHint : l10n.newOrderHint, '/order', primary: !tablesOn),
           const SizedBox(width: 12),
           action(const Key('home-orders'), Icons.receipt_long_outlined, l10n.ordersTitle, l10n.ordersHint, '/orders'),
         ],
+      ),
+    );
+  }
+}
+
+/// Restaurants with tables: the waiter's table map.
+class _TablesCard extends ConsumerWidget {
+  const _TablesCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (!(ref.watch(tablesEnabledProvider).value ?? false)) return const SizedBox.shrink();
+    if ((ref.watch(orderBranchesProvider).value ?? const []).isEmpty) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
+    final palette = context.palette;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Material(
+        color: palette.primary,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          key: const Key('home-tables'),
+          borderRadius: BorderRadius.circular(16),
+          onTap: () => context.push('/tables'),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                const Icon(Icons.table_restaurant, color: Colors.white, size: 32),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.tablesTitle, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18, color: Colors.white)),
+                      const SizedBox(height: 2),
+                      Text(l10n.tablesHint, style: const TextStyle(fontSize: 12, color: Colors.white70)),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: Colors.white),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

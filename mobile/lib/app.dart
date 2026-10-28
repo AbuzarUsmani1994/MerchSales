@@ -14,6 +14,7 @@ import 'features/ordering/cart_screen.dart';
 import 'features/ordering/menu_screen.dart';
 import 'features/ordering/orders_screen.dart';
 import 'features/sync/sync_status_screen.dart';
+import 'features/tables/tables_screen.dart';
 import 'features/version_gate/version_gate_screen.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'shared/language_switch.dart';
@@ -69,6 +70,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(path: 'orders', pageBuilder: (context, state) => _page(state, const OrdersScreen())),
           GoRoute(path: 'menu-qr', pageBuilder: (context, state) => _page(state, const MenuQrScreen())),
+          GoRoute(path: 'tables', pageBuilder: (context, state) => _page(state, const TablesScreen())),
         ],
       ),
     ],

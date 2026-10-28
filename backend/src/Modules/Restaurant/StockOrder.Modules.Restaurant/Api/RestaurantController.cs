@@ -106,6 +106,14 @@ public sealed class KitchenController(IMediator mediator) : ControllerBase
     [Idempotent]
     public Task<IActionResult> Served(Guid ticketId, CancellationToken ct) => Act(ticketId, KitchenAction.Serve, ct);
 
+    /// <summary>The waiter took everything that was ready for this order out to the table.</summary>
+    [HttpPost("orders/{orderId:guid}/served")]
+    [Authorize(Policy = RestaurantPermissions.KitchenServe)]
+    [BranchScoped]
+    [Idempotent]
+    public async Task<IActionResult> ServeOrder(Guid orderId, CancellationToken ct) =>
+        (await mediator.Send(new ServeReadyRoundsCommand(orderId), ct)).ToActionResult();
+
     private async Task<IActionResult> Act(Guid ticketId, KitchenAction action, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(Request.Headers.IfMatch))

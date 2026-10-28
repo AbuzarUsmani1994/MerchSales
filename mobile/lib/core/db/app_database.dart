@@ -652,6 +652,24 @@ class AppDatabase extends _$AppDatabase {
     return (selectOnly(localPermissions)..addColumns([count])).map((row) => row.read(count) ?? 0).watchSingle();
   }
 
+  Future<bool> readFeature(String key) async =>
+      (await (select(localFeatures)..where((f) => f.key.equals(key))).getSingleOrNull())?.isEnabled ?? false;
+
+  /// Whether a feature (e.g. "Restaurant.Tables") is switched on for the company.
+  Stream<bool> watchFeature(String key) => (select(localFeatures)..where((f) => f.key.equals(key)))
+      .watchSingleOrNull()
+      .map((row) => row?.isEnabled ?? false);
+
+  /// Whether the user holds a permission at any branch.
+  Stream<bool> watchHasPermission(String code) {
+    final count = localPermissions.code.count();
+    return (selectOnly(localPermissions)
+          ..addColumns([count])
+          ..where(localPermissions.code.equals(code)))
+        .map((row) => (row.read(count) ?? 0) > 0)
+        .watchSingle();
+  }
+
   Stream<int> watchEnabledFeatureCount() {
     final count = localFeatures.key.count();
     final query = selectOnly(localFeatures)
