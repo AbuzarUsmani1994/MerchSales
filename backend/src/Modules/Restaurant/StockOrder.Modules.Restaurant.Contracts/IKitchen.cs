@@ -13,6 +13,12 @@ public interface IKitchen
     /// <summary>Marks the order's unfinished tickets Cancelled; the kitchen screen shows them crossed out for a few minutes.</summary>
     Task CancelOrderAsync(Guid orderId, Guid branchId, CancellationToken ct);
 
+    /// <summary>
+    /// A dine-in table paid: the guests have eaten, so tickets nobody marked served come off the
+    /// screen as served. Not for takeaway, where customers often pay before the food is made.
+    /// </summary>
+    Task CloseTableOrderAsync(Guid orderId, Guid branchId, CancellationToken ct);
+
     /// <summary>How far the kitchen has got with each order, for the waiter's screens.</summary>
     Task<IReadOnlyDictionary<Guid, KitchenProgress>> GetProgressAsync(IReadOnlyCollection<Guid> orderIds, CancellationToken ct);
 }

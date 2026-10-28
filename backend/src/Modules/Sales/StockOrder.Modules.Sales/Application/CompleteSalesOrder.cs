@@ -5,6 +5,7 @@ using StockOrder.Infrastructure.NumberSeries;
 using StockOrder.Infrastructure.Outbox;
 using StockOrder.Modules.Catalog.Contracts;
 using StockOrder.Modules.Finance.Contracts;
+using StockOrder.Modules.Restaurant.Contracts;
 using StockOrder.Modules.Sales.Domain;
 using StockOrder.Modules.Sales.Infrastructure;
 using StockOrder.Modules.Tenancy.Contracts;
@@ -78,6 +79,7 @@ public sealed class CompleteSalesOrderCommandHandler(
     IOutboxWriter outbox,
     SalesOrderViewBuilder views,
     LoyaltyCheckout loyalty,
+    IKitchen kitchen,
     IClock clock,
     IIdGenerator idGenerator)
     : ICommandHandler<CompleteSalesOrderCommand, Result<CompletedSale>>
@@ -212,6 +214,10 @@ public sealed class CompleteSalesOrderCommandHandler(
         order.MoveTo(SalesOrderStatus.Closed, userId, now);
         var loyaltyOutcome = loyaltyCheck.Value is { } prepared ? loyalty.Record(prepared, order, businessDate) : null;
         await db.SaveChangesAsync(ct);
+        if (order.TableId is not null && order.OrderNo is not null)
+        {
+            await kitchen.CloseTableOrderAsync(order.Id, order.BranchId, ct);
+        }
 
         foreach (var status in new[] { SalesOrderStatus.Dispatched, SalesOrderStatus.Delivered, SalesOrderStatus.Invoiced, SalesOrderStatus.Paid, SalesOrderStatus.Closed })
         {

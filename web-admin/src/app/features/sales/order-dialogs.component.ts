@@ -13,6 +13,7 @@ import { MatInputModule } from '@angular/material/input';
 import { ConfigService } from '../../core/config.service';
 import { CashSession, CompletedSale, PaymentMethod, SalesOrder } from './sales.models';
 import { LoyaltyChoice, LoyaltyPanelComponent } from './loyalty-panel.component';
+import { SplitBillComponent, SplitChoice } from './split-bill.component';
 import { ReceiptPrinter } from './receipt-printer';
 
 function problemMessage(error: unknown): string {
@@ -33,14 +34,14 @@ export interface PaymentDialogData {
 @Component({
   selector: 'app-payment-dialog',
   standalone: true,
-  imports: [ReactiveFormsModule, DecimalPipe, MatDialogModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatInputModule, MatIconModule, LoyaltyPanelComponent],
+  imports: [ReactiveFormsModule, DecimalPipe, MatDialogModule, MatButtonModule, MatButtonToggleModule, MatFormFieldModule, MatInputModule, MatIconModule, LoyaltyPanelComponent, SplitBillComponent],
   template: `
-    <h2 mat-dialog-title>{{ reviewing() && !done() ? 'Check and take payment' : 'Take payment' }} · {{ data.order.documentNo }}</h2>
+    <h2 mat-dialog-title>{{ reviewing() && !done() ? 'Check and take payment' : 'Take payment' }} · {{ orderLabel() }}</h2>
     <mat-dialog-content>
       @if (done(); as sale) {
         <div class="done">
           <mat-icon class="done-icon">check_circle</mat-icon>
-          <div class="done-title">Paid {{ sale.amountPaid | number: '1.0-2' }} by {{ sale.paymentMethod ?? 'nothing due' }}</div>
+          <div class="done-title">Paid {{ sale.amountPaid | number: '1.0-2' }} by {{ sale.paymentMethod === 'Split' ? 'split bill' : (sale.paymentMethod ?? 'nothing due') }}</div>
           @if (sale.change > 0) {
             <div class="change">Give back <strong>{{ sale.change | number: '1.0-2' }}</strong></div>
           }
@@ -66,14 +67,19 @@ export interface PaymentDialogData {
         @if (reviewing()) {
           <div class="review">
             <div class="review-total">PKR {{ total() | number: '1.0-2' }}</div>
-            <div class="muted">by <strong>{{ methodName() }}</strong></div>
+            <div class="muted">by <strong>{{ split() ? 'split bill' : methodName() }}</strong></div>
             <dl>
-              <dt>Order</dt><dd>{{ data.order.documentNo }} · {{ data.order.notes || 'Walk-in' }}</dd>
+              <dt>Order</dt><dd>{{ data.order.documentNo }} · {{ forWhom() }}</dd>
               <dt>Items</dt><dd>{{ itemCount() }}</dd>
               <dt>Bill</dt><dd>{{ data.order.grandTotal | number: '1.0-2' }}</dd>
               @if (reward() > 0) { <dt>Visit reward</dt><dd>-{{ reward() | number: '1.0-2' }}</dd> }
               @if (loyalty().phone) { <dt>Member</dt><dd>{{ loyalty().phone }}</dd> }
-              @if (isCash()) {
+              @if (split()) {
+                @for (p of splitChoice().parts; track $index; let i = $index) {
+                  <dt>Guest {{ i + 1 }} · {{ methodNameOf(p.paymentMethodId) }}</dt>
+                  <dd>{{ p.amount | number: '1.0-2' }}@if (p.tendered !== null && p.tendered > p.amount) { <span class="muted"> (change {{ p.tendered - p.amount | number: '1.0-2' }})</span> }</dd>
+                }
+              } @else if (isCash()) {
                 <dt>Cash received</dt><dd>{{ value().tendered | number: '1.0-2' }}</dd>
                 <dt>Change</dt><dd class="strong">{{ change() | number: '1.0-2' }}</dd>
               } @else if (value().reference) {
@@ -85,7 +91,7 @@ export interface PaymentDialogData {
         }
         <div [hidden]="reviewing()">
         <div class="total-row">
-          <span>{{ data.order.notes || 'Walk-in' }}</span>
+          <span>{{ forWhom() }}</span>
           <span class="total">
             @if (reward() > 0) { <s class="was">{{ data.order.grandTotal | number: '1.0-2' }}</s> }
             PKR {{ total() | number: '1.0-2' }}
@@ -93,7 +99,16 @@ export interface PaymentDialogData {
         </div>
         <app-loyalty-panel [branchId]="data.order.branchId" [total]="data.order.grandTotal"
                            [initialPhone]="data.order.loyaltyPhone" (changed)="loyaltyChanged($event)" />
-        <form [formGroup]="form">
+        <div class="split-switch">
+          <button mat-stroked-button type="button" (click)="split.set(!split())">
+            <mat-icon>{{ split() ? 'person' : 'groups' }}</mat-icon> {{ split() ? 'One payment' : 'Split bill' }}
+          </button>
+        </div>
+        @if (split()) {
+          <app-split-bill [total]="total()" [reward]="reward()" [lines]="data.order.lines" [methods]="data.methods"
+                          (changed)="splitChoice.set($event)" />
+        }
+        <form [formGroup]="form" [hidden]="split()">
           <mat-button-toggle-group formControlName="methodId" class="methods" aria-label="Payment method">
             @for (m of data.methods; track m.id) {
               <mat-button-toggle [value]="m.id">{{ m.name }}</mat-button-toggle>
@@ -147,6 +162,7 @@ export interface PaymentDialogData {
   `,
   styles: `
     .total-row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 1rem; }
+    .split-switch { display: flex; justify-content: flex-end; margin: -0.25rem 0 0.75rem; }
     .total { font-size: 1.6rem; font-weight: 700; font-variant-numeric: tabular-nums; }
     .methods { margin-bottom: 1rem; flex-wrap: wrap; }
     .quick { display: flex; gap: 0.5rem; flex-wrap: wrap; margin: -0.5rem 0 0.75rem; }
@@ -195,6 +211,18 @@ export class PaymentDialogComponent {
   readonly methodName = computed(() => this.data.methods.find((m) => m.id === this.value().methodId)?.name ?? '');
   readonly itemCount = computed(() => this.data.order.lines.reduce((n, l) => n + l.quantity, 0));
   readonly loyalty = signal<LoyaltyChoice>({ phone: null, useReward: false, rewardAmount: 0 });
+  readonly split = signal(false);
+  readonly splitChoice = signal<SplitChoice>({ parts: [], valid: false });
+
+  /** "#23 · Table 4" in restaurants, else the order number. */
+  readonly orderLabel = computed(() => {
+    const o = this.data.order;
+    return o.orderNo ? `#${o.orderNo}${o.tableName ? ' · Table ' + o.tableName : ''}` : (o.documentNo ?? '');
+  });
+  readonly forWhom = computed(() => {
+    const o = this.data.order;
+    return o.tableName ? `Table ${o.tableName}${o.covers ? ' · ' + o.covers + ' guests' : ''}` : (o.notes || 'Walk-in');
+  });
 
   /** The visit reward comes off the bill before payment; the server checks it again. */
   readonly reward = computed(() => (this.loyalty().useReward ? Math.min(this.loyalty().rewardAmount, this.data.order.grandTotal) : 0));
@@ -202,7 +230,12 @@ export class PaymentDialogComponent {
 
   readonly isCash = computed(() => this.data.methods.find((m) => m.id === this.value().methodId)?.kind === 'Cash');
   readonly change = computed(() => Number(this.value().tendered ?? 0) - this.total());
-  readonly canPay = computed(() => !!this.value().methodId && (!this.isCash() || this.change() >= 0));
+  readonly canPay = computed(() =>
+    this.split() ? this.splitChoice().valid : !!this.value().methodId && (!this.isCash() || this.change() >= 0));
+
+  methodNameOf(id: string): string {
+    return this.data.methods.find((m) => m.id === id)?.name ?? '';
+  }
 
   /** Exact, then the next round notes a customer is likely to hand over. */
   readonly quickAmounts = computed(() => {
@@ -253,12 +286,13 @@ export class PaymentDialogComponent {
             reference: this.isCash() ? null : v.reference.trim() || null,
             loyaltyPhone: this.loyalty().phone,
             useReward: this.loyalty().useReward,
+            payments: this.split() ? this.splitChoice().parts : null,
           },
           { headers: new HttpHeaders({ 'If-Match': `"${this.data.order.etag}"` }) },
         ),
       );
       this.done.set(sale);
-      this.tenderedAtPayment = this.isCash() ? Number(v.tendered) : null;
+      this.tenderedAtPayment = this.split() ? sale.cashTendered : this.isCash() ? Number(v.tendered) : null;
       void this.printReceipt(false);
     } catch (e) {
       // Back to the form: the reason (e.g. reward not ready) usually needs a change there.

@@ -54,6 +54,26 @@ internal sealed class Kitchen(
         notifier.BranchChanged(branchId);
     }
 
+    public async Task CloseTableOrderAsync(Guid orderId, Guid branchId, CancellationToken ct)
+    {
+        var tickets = await db.KitchenTickets
+            .Where(t => t.TenantId == currentUser.TenantId && t.SalesOrderId == orderId && KitchenTicketStatus.InKitchen.Contains(t.Status))
+            .ToListAsync(ct);
+        if (tickets.Count == 0)
+        {
+            return;
+        }
+
+        var now = clock.UtcNow;
+        foreach (var ticket in tickets)
+        {
+            ticket.Apply(KitchenAction.Serve, currentUser.UserId, now);
+        }
+
+        await db.SaveChangesAsync(ct);
+        notifier.BranchChanged(branchId);
+    }
+
     public async Task<IReadOnlyDictionary<Guid, KitchenProgress>> GetProgressAsync(IReadOnlyCollection<Guid> orderIds, CancellationToken ct)
     {
         if (orderIds.Count == 0)

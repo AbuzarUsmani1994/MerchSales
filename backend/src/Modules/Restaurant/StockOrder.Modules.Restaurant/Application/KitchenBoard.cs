@@ -21,6 +21,9 @@ public static class KitchenTimings
     /// <summary>A cancelled ticket shows crossed out this long, so the cook sees it was stopped.</summary>
     public static readonly TimeSpan BoardCancelled = TimeSpan.FromMinutes(5);
 
+    /// <summary>Anything older leaves the kitchen screen: a ticket nobody finished yesterday isn't today's work.</summary>
+    public static readonly TimeSpan BoardMaxAge = TimeSpan.FromHours(12);
+
     /// <summary>A ready number leaves the customer screen after this even if nobody taps Served.</summary>
     public static readonly TimeSpan CustomerScreenReady = TimeSpan.FromMinutes(10);
 }
@@ -52,9 +55,10 @@ public sealed class GetKitchenBoardQueryHandler(RestaurantDbContext db, ICurrent
         var now = clock.UtcNow;
         var readySince = now - KitchenTimings.BoardReady;
         var cancelledSince = now - KitchenTimings.BoardCancelled;
+        var oldest = now - KitchenTimings.BoardMaxAge;
         var tickets = await db.KitchenTickets.AsNoTracking()
             .Include(t => t.Lines)
-            .Where(t => t.TenantId == currentUser.TenantId && t.BranchId == query.BranchId)
+            .Where(t => t.TenantId == currentUser.TenantId && t.BranchId == query.BranchId && t.CreatedAtUtc >= oldest)
             .Where(t => t.Status == KitchenTicketStatus.Queued || t.Status == KitchenTicketStatus.Preparing
                 || (t.Status == KitchenTicketStatus.Ready && t.ReadyAtUtc >= readySince)
                 || (t.Status == KitchenTicketStatus.Cancelled && t.CancelledAtUtc >= cancelledSince))
@@ -143,7 +147,7 @@ public sealed class GetOrderScreenQueryHandler(IPublicMenuLinkLookup links, ITen
             WHERE TenantId = @tenantId AND BranchId = @branchId AND Channel <> 'DineIn' AND CreatedAtUtc >= @since
               AND (Status IN ('Queued', 'Preparing') OR (Status = 'Ready' AND ReadyAtUtc >= @readySince));
             """,
-            new { tenantId = link.TenantId, branchId = link.BranchId, since = now.AddHours(-12), readySince = now - KitchenTimings.CustomerScreenReady },
+            new { tenantId = link.TenantId, branchId = link.BranchId, since = now - KitchenTimings.BoardMaxAge, readySince = now - KitchenTimings.CustomerScreenReady },
             cancellationToken: ct))).ToList();
 
         // An order with any round still in the kitchen is "preparing"; it is "ready" once all its shown rounds are.

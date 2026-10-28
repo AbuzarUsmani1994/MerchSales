@@ -35,6 +35,13 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    title: 'Restaurant',
+    entries: [
+      { label: 'Kitchen', icon: 'soup_kitchen', routerLink: '/restaurant/kitchen', permission: 'Restaurant.Kitchen.Operate', feature: 'Restaurant.Kitchen' },
+      { label: 'Tables', icon: 'table_restaurant', routerLink: '/restaurant/tables', permission: 'Restaurant.Tables.Manage', feature: 'Restaurant.Tables' },
+    ],
+  },
+  {
     title: 'Catalog',
     entries: [
       { label: 'Menu', icon: 'restaurant_menu', routerLink: '/catalog/menu', permission: 'Catalog.View' },
@@ -74,6 +81,12 @@ export function visibleNavSections(auth: AuthService): NavSection[] {
  */
 export const homeRedirectGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
-  const first = visibleNavSections(auth)[0]?.entries[0];
+  const entries = visibleNavSections(auth).flatMap((section) => section.entries);
+  // Kitchen staff (the kitchen screen, but no order taking) start on the kitchen screen.
+  const kitchen = entries.find((entry) => entry.routerLink === '/restaurant/kitchen');
+  if (kitchen && !auth.hasPermission('Sales.Order.Create')) {
+    return inject(Router).createUrlTree([kitchen.routerLink]);
+  }
+  const first = entries[0];
   return first ? inject(Router).createUrlTree([first.routerLink]) : true;
 };

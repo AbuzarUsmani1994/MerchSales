@@ -85,17 +85,27 @@ const REFRESH_MS = 10_000;
 
       <div class="grid">
         @for (o of orders(); track o.id) {
-          <article class="order card" [class.fresh]="fresh().has(o.id)">
+          <article class="order card" [class.fresh]="fresh().has(o.id)" [class.bill]="o.billRequested && tab() === 'toPay'">
             <header>
               <div>
-                <div class="label">{{ o.notes || 'Walk-in' }}</div>
+                <div class="label">
+                  @if (o.orderNo) { <span class="no">#{{ o.orderNo }}</span> }
+                  {{ o.tableName ? 'Table ' + o.tableName : (o.notes || 'Walk-in') }}
+                </div>
+                @if (o.tableName && (o.covers || o.notes)) {
+                  <div class="meta">@if (o.covers) { {{ o.covers }} guests }@if (o.covers && o.notes) { · }{{ o.notes }}</div>
+                }
                 <div class="meta">
                   <span class="mono">{{ o.documentNo }}</span> · {{ o.orderDate | date: 'shortTime' }}
                   @if (o.takenBy) { · {{ o.takenBy }} }
                 </div>
               </div>
-              <span class="pill" [class.pill-success]="o.status === 'Closed'" [class.pill-danger]="o.status === 'Cancelled'"
-                    [class.pill-warning]="o.status === 'Confirmed'">{{ statusLabel(o.status) }}</span>
+              @if (o.billRequested && tab() === 'toPay') {
+                <span class="pill pill-danger"><mat-icon class="pill-icon">receipt</mat-icon> Bill asked</span>
+              } @else {
+                <span class="pill" [class.pill-success]="o.status === 'Closed'" [class.pill-danger]="o.status === 'Cancelled'"
+                      [class.pill-warning]="o.status === 'Confirmed'">{{ statusLabel(o.status) }}</span>
+              }
             </header>
             <ul class="lines">
               @for (l of o.lines; track l.id) {
@@ -152,6 +162,9 @@ const REFRESH_MS = 10_000;
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
     .order { display: flex; flex-direction: column; padding: 1rem; gap: 0.75rem; transition: box-shadow 0.3s; }
     .order.fresh { box-shadow: 0 0 0 3px var(--so-accent-ring); }
+    .order.bill { border-color: var(--so-danger); }
+    .no { color: var(--so-accent); margin-right: 0.25rem; font-variant-numeric: tabular-nums; }
+    .pill-icon { font-size: 14px; width: 14px; height: 14px; vertical-align: -2px; }
     .order header { display: flex; justify-content: space-between; gap: 0.5rem; align-items: flex-start; }
     .label { font-size: 1.15rem; font-weight: 700; }
     .meta { font-size: 0.8rem; color: var(--so-text-muted); margin-top: 0.15rem; }

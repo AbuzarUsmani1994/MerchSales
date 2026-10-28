@@ -54,6 +54,16 @@ export const routes: Routes = [
         canActivate: [permissionGuard('Sales.Loyalty.Manage')],
       },
       {
+        path: 'restaurant/kitchen',
+        loadComponent: () => import('./features/restaurant/kitchen.component').then((m) => m.KitchenComponent),
+        canActivate: [permissionGuard('Restaurant.Kitchen.Operate', { feature: 'Restaurant.Kitchen' })],
+      },
+      {
+        path: 'restaurant/tables',
+        loadComponent: () => import('./features/restaurant/tables.component').then((m) => m.TablesComponent),
+        canActivate: [permissionGuard('Restaurant.Tables.Manage', { feature: 'Restaurant.Tables' })],
+      },
+      {
         path: 'catalog/menu',
         loadComponent: () => import('./features/catalog/menu.component').then((m) => m.MenuComponent),
         canActivate: [permissionGuard('Catalog.View')],
